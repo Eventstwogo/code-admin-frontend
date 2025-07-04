@@ -1,27 +1,26 @@
 
-
-
 // "use client";
 
 // import React, { useEffect, useState } from "react";
 // import slugify from "slugify";
-// import { useRouter } from "next/navigation";
+// import { useRouter, useSearchParams } from "next/navigation";
 // import { useForm } from "react-hook-form";
 // import { z } from "zod";
 // import { zodResolver } from "@hookform/resolvers/zod";
 // import { Input } from "@/components/ui/input";
 // import axiosInstance from "@/lib/axiosInstance";
-// import { toast } from "sonner"; // if not already imported
-// // Schema
+// import { toast } from "sonner";
+
+// // Zod Schema
 // const categorySchema = z.object({
 //   name: z
 //     .string()
 //     .min(3, "Category name must be at least 3 characters")
 //     .max(50, "Category name must not exceed 50 characters")
 //     .regex(/^[A-Za-z0-9\s-]+$/, "Only letters, numbers, spaces, and hyphens allowed")
-//      .refine((val) => val.trim().length > 0, {
-//     message: "Category name cannot be just spaces",
-//   }),
+//     .refine((val) => val.trim().length > 0, {
+//       message: "Category name cannot be just spaces",
+//     }),
 //   slug: z
 //     .string()
 //     .min(1, "Slug is required")
@@ -54,11 +53,13 @@
 // type CategoryFormData = z.infer<typeof categorySchema>;
 
 // const CategoryCreation = () => {
+//   const router = useRouter();
+//   const searchParams = useSearchParams();
+//   const categoryId = searchParams.get("id");
+
+//   const [categories, setCategories] = useState([]);
 //   const [imagePreview, setImagePreview] = useState<string | null>(null);
 //   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
-
-//   const[categories,setCategories]=useState([])
-//   const router = useRouter();
 
 //   const {
 //     register,
@@ -85,14 +86,11 @@
 
 //   const name = watch("name");
 
-//   useEffect(() => {
-//     const generatedSlug = slugify(name || "", { lower: true });
-//     setValue("slug", generatedSlug);
-//   }, [name, setValue]);
+
 
 //   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 //     const file = e.target.files?.[0];
-// setSelectedImageFile(file)
+//     setSelectedImageFile(file);
 //     if (file) {
 //       const reader = new FileReader();
 //       reader.onloadend = () => setImagePreview(reader.result as string);
@@ -102,61 +100,89 @@
 
 //   const handleImageRemove = () => {
 //     setImagePreview(null);
+//     setSelectedImageFile(null);
 //   };
 
 //   const handleBack = () => {
 //     router.push("/Categories");
 //   };
 
+//   const fetchCategories = async () => {
+//     try {
+//       const response = await axiosInstance.get("/api/v1/categories/?status_filter=false");
+//       setCategories(response.data.data);
+//     } catch (error) {
+//       console.error("Failed to fetch categories:", error);
+//     }
+//   };
 
-//     const fetchCategories = async () => {
-//       try {
-//         const response = await axiosInstance.get('/api/v1/categories/?status_filter=false');
-//         setCategories(response.data.data);
-//       } catch (error) {
-//         console.error('Failed to fetch roles:', error);
+//   const fetchCategory = async (id: string) => {
+//     try {
+//       const response = await axiosInstance.get(`api/v1/categories_or_subcategories_by_id/details/${id}`);
+//       const category = response.data.data;
+// console.log(category)
+//       setValue("name", category.category_name || category.subcategory_name);
+//       setValue("slug", category.category_slug|| category.subcategory_slug);
+//       setValue("description", category.category_description ||category.subcategory_description || "");
+//       setValue("metaTitle", category.category_meta_title ||category.subcategory_meta_titl||'');
+//       setValue("metaDescription", category.category_meta_description ||category.subcategory_meta_description|| "");
+//       setValue("parent", category.category_id || "");
+//       setValue("features", {
+//         featured: category.featured_category || category.featured_subcategory,
+//         homepage: category.show_in_menu,
+//         promotions: false,
+//       });
+
+//       if (category.category_img_thumbnail||category.subcategory_img_thumbnail) {
+//         setImagePreview(`${category.category_img_thumbnail || category.subcategory_img_thumbnail}`);
 //       }
-//     };
-// useEffect(()=>{
-//   fetchCategories()
-// },[])
-// const onSubmit = async (data: CategoryFormData) => {
-//   try {
-//     const formData = new FormData();
+//     } catch (error) {
+//       console.error("Failed to fetch category:", error);
+//     }
+//   };
 
-//     // Basic fields
-//     formData.append("name", data.name);
-//     formData.append("slug", data.slug);
-//     formData.append("description", data.description || "");
-//     formData.append("meta_title", data.metaTitle || "");
-//     formData.append("meta_description", data.metaDescription || "");
-//     formData.append("category_id", data.parent || "");
+//   useEffect(() => {
+//     fetchCategories();
+//     if (categoryId) fetchCategory(categoryId);
+//   }, [categoryId]);
+// console.log(imagePreview)
+//   const onSubmit = async (data: CategoryFormData) => {
+//     try {
+//       const formData = new FormData();
 
-//     // Boolean features
-//     formData.append("featured", String(data.features.featured));
-//     formData.append("show_in_menu", String(data.features.homepage));
+//       formData.append("name", data.name);
+//       formData.append("slug", data.slug);
+//       formData.append("description", data.description || "");
+//       formData.append("meta_title", data.metaTitle || "");
+//       formData.append("meta_description", data.metaDescription || "");
+//       formData.append("category_id", data.parent || "");
+//       formData.append("featured", String(data.features.featured));
+//       formData.append("show_in_menu", String(data.features.homepage));
 
-// if (selectedImageFile) {
-//   formData.append("file", selectedImageFile);
-// }
+//       if (selectedImageFile) {
+//         formData.append("file", selectedImageFile);
+//       }
 
-//     // POST request
-//     const response = await axiosInstance.post("/api/v1/categories/create", formData, {
-//       headers: { "Content-Type": "multipart/form-data" },
-//     });
-// if(response.data.statusCode==201){
-//       toast.success(response.data.message);
-//     router.push("/Categories");
-// }
- 
-//   } catch (error: any) {
-//     const message =
-//       error?.response?.data?.detail?.message || "Failed to create category.";
-//     toast.error(message);
-//     console.error("Error creating category:", error);
-//   }
-// };
+//       const endpoint = categoryId
+//         ? `/api/v1/categories_or_subcategories_by_id/update/${categoryId}`
+//         : "/api/v1/categories/create";
+//       const method = categoryId ? "put" : "post";
 
+//       const response = await axiosInstance[method](endpoint, formData, {
+//         headers: { "Content-Type": "multipart/form-data" },
+//       });
+
+//       if (response.data.statusCode === 200 || response.data.statusCode === 201) {
+//         toast.success(response.data.message);
+//         router.push("/Categories");
+//       }
+//     } catch (error: any) {
+//       const message =
+//         error?.response?.data?.detail?.message || "Failed to save category.";
+//       toast.error(message);
+//       console.error("Error saving category:", error);
+//     }
+//   };
 
 //   return (
 //     <div className="bg-gray-50 pt-6 pb-6 px-4 md:px-8">
@@ -174,7 +200,7 @@
 //               form="category-form"
 //               className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 cursor-pointer"
 //             >
-//               Save Category
+//               {categoryId ? "Update Category" : "Save Category"}
 //             </button>
 //             <button
 //               onClick={handleBack}
@@ -275,14 +301,14 @@
 //               )}
 
 //               <label className="block mt-3 mb-1 font-medium text-gray-700">Parent Category</label>
-//              <select {...register("parent")} className="w-full px-3 py-2 border rounded-md">
-//   <option value="">Select parent category (if applicable)</option>
-//   {categories.map((category) => (
-//     <option key={category.id} value={category.category_id}>
-//       {category.category_name}
-//     </option>
-//   ))}
-// </select>
+//               <select {...register("parent")} className="w-full px-3 py-2 border rounded-md">
+//                 <option value="">Select parent category (if applicable)</option>
+//                 {categories.map((category: any) => (
+//                   <option key={category.id} value={category.category_id}>
+//                     {category.category_name}
+//                   </option>
+//                 ))}
+//               </select>
 //             </div>
 //           </div>
 
@@ -322,7 +348,7 @@
 //             <textarea
 //               {...register("metaDescription")}
 //               rows={3}
-//               className="w-full px-3 py-2 border rounded-md  max-h-40 min-h-10"
+//               className="w-full px-3 py-2 border rounded-md max-h-40 min-h-10"
 //               placeholder="Short SEO description"
 //               maxLength={161}
 //             />
@@ -357,7 +383,7 @@ const categorySchema = z.object({
     .string()
     .min(3, "Category name must be at least 3 characters")
     .max(50, "Category name must not exceed 50 characters")
-    .regex(/^[A-Za-z0-9\s-]+$/, "Only letters, numbers, spaces, and hyphens allowed")
+    .regex(/^[A-Za-z\s-]+$/, "Only letters,  spaces, and hyphens allowed")
     .refine((val) => val.trim().length > 0, {
       message: "Category name cannot be just spaces",
     }),
@@ -400,6 +426,7 @@ const CategoryCreation = () => {
   const [categories, setCategories] = useState([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [nameTouched, setNameTouched] = useState(false);
 
   const {
     register,
@@ -426,12 +453,12 @@ const CategoryCreation = () => {
 
   const name = watch("name");
 
+  // Auto-generate slug *only* if user has touched name
   useEffect(() => {
-    if (!categoryId) {
-      const generatedSlug = slugify(name || "", { lower: true });
-      setValue("slug", generatedSlug);
+    if (nameTouched) {
+      setValue("slug", slugify(name || "", { lower: true, strict: true }));
     }
-  }, [name, setValue, categoryId]);
+  }, [name, nameTouched, setValue]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -465,12 +492,12 @@ const CategoryCreation = () => {
     try {
       const response = await axiosInstance.get(`api/v1/categories_or_subcategories_by_id/details/${id}`);
       const category = response.data.data;
-console.log(category)
-      setValue("name", category.category_name || category.subcategory_name);
-      setValue("slug", category.category_slug|| category.subcategory_slug);
-      setValue("description", category.category_description ||category.subcategory_description || "");
-      setValue("metaTitle", category.category_meta_title ||category.subcategory_meta_titl||'');
-      setValue("metaDescription", category.category_meta_description ||category.subcategory_meta_description|| "");
+
+      setValue("name", category.category_name || category.subcategory_name || "");
+      setValue("slug", category.category_slug || category.subcategory_slug || "");
+      setValue("description", category.category_description || category.subcategory_description || "");
+      setValue("metaTitle", category.category_meta_title || category.subcategory_meta_titl || "");
+      setValue("metaDescription", category.category_meta_description || category.subcategory_meta_description || "");
       setValue("parent", category.category_id || "");
       setValue("features", {
         featured: category.featured_category || category.featured_subcategory,
@@ -478,7 +505,9 @@ console.log(category)
         promotions: false,
       });
 
-      if (category.category_img_thumbnail||category.subcategory_img_thumbnail) {
+      setNameTouched(false);
+
+      if (category.category_img_thumbnail || category.subcategory_img_thumbnail) {
         setImagePreview(`${category.category_img_thumbnail || category.subcategory_img_thumbnail}`);
       }
     } catch (error) {
@@ -490,7 +519,7 @@ console.log(category)
     fetchCategories();
     if (categoryId) fetchCategory(categoryId);
   }, [categoryId]);
-console.log(imagePreview)
+
   const onSubmit = async (data: CategoryFormData) => {
     try {
       const formData = new FormData();
@@ -620,6 +649,10 @@ console.log(imagePreview)
                 {...register("name")}
                 className="w-full px-3 py-2 border rounded-md"
                 placeholder="Enter category name"
+                onChange={(e) => {
+                  setValue("name", e.target.value);
+                  setNameTouched(true);
+                }}
               />
               {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
 

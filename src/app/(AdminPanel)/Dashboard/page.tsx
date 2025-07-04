@@ -41,12 +41,7 @@ const DashboardPage = () => {
       description: "System configuration and preferences",
       href: "/Settings",
     },
-    {
-      title: "Expiring Tickets",
-      icon: <CalendarCheck className="w-5 h-5 text-red-600" />,
-      description: "Monitor tickets nearing expiration",
-      href: "/tickets/expiring",
-    },
+
   ];
 
   return (

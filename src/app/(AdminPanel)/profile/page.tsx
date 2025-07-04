@@ -86,7 +86,7 @@
 
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState,useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -95,19 +95,43 @@ import useStore from "@/lib/Zustand";
 import axiosInstance from "@/lib/axiosInstance";
 import { toast } from "sonner";
 
+type User = {
+  id: string;
+  username: string;
+  role_name: string;
+  email:string
+  profile_picture: string;
+};
 export default function ProfilePage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showActions, setShowActions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+  
   const { userId } = useStore();
 
-  const user = {
-    name: "Vineetha",
-    email: "vineetha@example.com",
-    role: "Admin",
-    phone: "+91 98765 43210",
-  };
+ const fetchUserDetails=async(userId)=>{
+    try{
+      const response=axiosInstance.get(`/api/v1/admin-users/admin-users/${userId}`)
+setUser((await response).data.data)
+setLoading(false)
+    }
+    catch(error){
+      toast.error('failed to Fetch the user data')
+    }
+  }
+  useEffect(() => {
+    if (!userId) return;
+
+    setLoading(true);
+    setError(null);
+
+    fetchUserDetails(userId)
+     
+  }, [userId]);
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -176,7 +200,7 @@ export default function ProfilePage() {
       {/* Image Upload */}
       <div className="flex flex-col items-center space-y-4">
         <img
-          src={avatarPreview ?? "/placeholder-avatar.png"}
+         src={avatarPreview ?? user?.profile_picture ?? "/placeholder-avatar.png"}
           alt="Profile"
           className="w-40 h-40 rounded-full object-cover border border-gray-300"
         />
@@ -208,20 +232,17 @@ export default function ProfilePage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
         <div>
           <Label className="text-gray-600">Full Name</Label>
-          <p className="font-medium">{user.name}</p>
+          <p className="font-medium">{user?.username}</p>
         </div>
         <div>
           <Label className="text-gray-600">Email</Label>
-          <p className="font-medium">{user.email}</p>
+          <p className="font-medium">{user?.email}</p>
         </div>
         <div>
           <Label className="text-gray-600">Role</Label>
-          <p className="font-medium">{user.role}</p>
+          <p className="font-medium">{user?.role_name}</p>
         </div>
-        <div>
-          <Label className="text-gray-600">Phone</Label>
-          <p className="font-medium">{user.phone}</p>
-        </div>
+       
       </div>
     </div>
   );
