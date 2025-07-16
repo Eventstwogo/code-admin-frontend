@@ -24,18 +24,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning is used to prevent hydration errors due to theme mismatch between server and client
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      > <ThemeProvider
-          attribute="class"
+      >
+        <ThemeProvider
+          attribute="class" // Ensures theme class is applied to <html> for SSR consistency
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-        {children}
-        <Toaster richColors />
-         </ThemeProvider>
+          {children}
+          <Toaster richColors />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -129,37 +129,15 @@ const ProfilePicture = ({
   className?: string; 
 }) => {
   const [imageError, setImageError] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
 
-  const initials = username
-    .split(' ')
-    .filter(name => name.length > 0)
-    .map(name => name[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || username[0]?.toUpperCase() || '?';
+  const initials = username?.[0]?.toUpperCase() || '?';
+  const isValidImage = src && /^https?:\/\//.test(src) && !imageError;
 
-  const colorVariants = [
-    'bg-blue-500',
-    'bg-green-500',
-    'bg-purple-500',
-    'bg-orange-500',
-    'bg-pink-500',
-    'bg-indigo-500',
-    'bg-teal-500',
-    'bg-red-500',
-  ];
-
-  // Generate consistent color based on username
-  const colorIndex = username.charCodeAt(0) % colorVariants.length;
-  const bgColor = colorVariants[colorIndex];
-
-  // Show initials if no src, image error, or image hasn't loaded yet
-  if (!src || imageError || !imageLoaded) {
+  if (!isValidImage) {
     return (
       <div 
-        className={`flex items-center justify-center rounded-full ${bgColor} text-white font-semibold transition-all duration-200 hover:scale-105 ${className}`}
-        style={{ width: size, height: size, fontSize: size * 0.4 }}
+        className={`flex items-center justify-center rounded-full bg-orange-500 text-white font-semibold transition-all duration-200 hover:scale-105 ${className}`}
+        style={{ width: size, height: size, fontSize: size * 0.5 }}
         title={username}
       >
         {initials}
@@ -168,26 +146,17 @@ const ProfilePicture = ({
   }
 
   return (
-    <div className={`relative overflow-hidden rounded-full transition-all duration-200 hover:scale-105 ${className}`} style={{ width: size, height: size }}>
-      <Image 
-        src={src} 
-        alt={`${username}'s profile`} 
-        fill
-        sizes="100%"
-        className="object-cover"
-        onError={() => setImageError(true)}
-        onLoad={() => setImageLoaded(true)}
-        title={username}
-      />
-    {!imageLoaded && (
-        <div 
-            className={`absolute inset-0 flex items-center justify-center ${bgColor} text-white font-semibold animate-pulse`}
-          style={{ fontSize: size * 0.4 }}
-        >
-          {initials}
-        </div>
-      )}
-    </div>
+    <Image
+      src={src}
+      alt={`${username}'s profile`}
+      width={size}
+      height={size}
+      className={`rounded-full object-cover transition-all duration-200 hover:scale-105 ${className}`}
+      onError={() => setImageError(true)}
+      title={username}
+      // placeholder="blur" // Uncomment and add blurDataURL for blur-up effect
+      // blurDataURL="/placeholder-avatar.png"
+    />
   );
 };
 
@@ -290,12 +259,12 @@ export default function UsersPage() {
         cell: ({ row }) => {
           const user = row.original;
           return (
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center h-full w-full">
               <ProfilePicture
                 src={user.profile_picture}
                 username={user.username}
-                size={32}
-                className="border border-border/50"
+                size={36}
+                className="border border-border/50 mx-auto my-1"
               />
             </div>
           );
@@ -308,15 +277,8 @@ export default function UsersPage() {
           const user = row.original;
           return (
             <div className="flex items-center gap-3">
-              <ProfilePicture
-                src={user.profile_picture}
-                username={user.username}
-                size={32}
-                className="border border-border/50"
-              />
-              <div className="flex flex-col">
-                <span className="font-medium text-foreground">{user.username}</span>
-              </div>
+              {/* Only show the username, not the avatar */}
+              <span className="font-medium text-foreground">{user.username}</span>
             </div>
           );
         },

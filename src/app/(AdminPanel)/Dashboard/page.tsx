@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +21,23 @@ import {
   Minus,
   RefreshCw,
   AlertCircle,
+  Bell,
+  User as UserIcon,
 } from "lucide-react";
+
+// Mock user info (replace with real user data if available)
+const user = {
+  name: "Admin User",
+  avatar: null,
+  role: "Administrator",
+};
+
+// Mock recent activity (replace with real data if available)
+const recentActivity = [
+  { id: 1, type: "event", message: "Created new event: Summer Fest 2024", time: "2 hours ago" },
+  { id: 2, type: "user", message: "New user registered: John Doe", time: "4 hours ago" },
+  { id: 3, type: "ticket", message: "Sold 50 tickets for Music Night", time: "Yesterday" },
+];
 
 // Dashboard skeleton component
 const DashboardSkeleton = () => {
@@ -216,7 +232,7 @@ const DashboardPage = () => {
 
   return (
     <main className="container mx-auto px-4 py-8 space-y-8">
-      {/* Header Section */}
+      {/* Welcome/User Info Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/25">
@@ -227,42 +243,40 @@ const DashboardPage = () => {
               Dashboard
             </h1>
             <p className="text-muted-foreground">
-              Welcome back! Here's an overview of your ticket booking system
+              Welcome back, <span className="font-semibold text-foreground">{user.name}</span>! Here's an overview of your ticket booking system.
             </p>
           </div>
         </div>
-        
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={refetch}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </Button>
+          <Link href="/Settings">
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <Settings className="w-5 h-5 text-muted-foreground" />
+            </Button>
+          </Link>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-100 dark:bg-green-900/30">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             <span className="text-sm font-medium text-green-700 dark:text-green-400">Live</span>
           </div>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+              <UserIcon className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <span className="text-sm text-foreground font-medium">{user.role}</span>
+          </div>
         </div>
       </div>
 
-      {/* Main Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {/* Quick Stats Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {statsConfig.map((config, index) => {
           const statData = formattedStats[index];
           if (!statData) return null;
-
           return (
             <Card
               key={config.title}
-              className={`relative overflow-hidden border-0 bg-gradient-to-br ${config.bgGradient} ${getCardHoverClass(config.bgGradient)} group`}
+              className={`relative overflow-hidden border-0 bg-gradient-to-br ${config.bgGradient} ${getCardHoverClass(config.bgGradient)} group transition-shadow duration-200 hover:shadow-lg dark:hover:shadow-black/30`}
             >
-              {/* Gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent dark:from-white/5 dark:to-transparent" />
-              
               <CardHeader className="relative flex flex-row items-center justify-between pb-3">
                 <div className="space-y-1">
                   <CardTitle className="text-sm font-medium text-foreground/80">
@@ -297,7 +311,6 @@ const DashboardPage = () => {
                   </div>
                 </div>
               </CardHeader>
-              
               <CardContent className="relative pt-0">
                 <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                   {config.description}
@@ -317,17 +330,45 @@ const DashboardPage = () => {
         })}
       </div>
 
+      {/* System Health/Notifications Card and Recent Activity Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="bg-white dark:bg-zinc-900 border border-border/50 shadow-sm">
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            <Bell className="w-5 h-5 text-yellow-500" />
+            <CardTitle className="text-base font-semibold text-foreground">Notifications</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="text-sm text-muted-foreground">No new notifications. All systems operational!</div>
+          </CardContent>
+        </Card>
+        {/* Recent Activity Section */}
+        <Card className="bg-white dark:bg-zinc-900 border border-border/50 shadow-sm">
+          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+            <Activity className="w-5 h-5 text-blue-500" />
+            <CardTitle className="text-base font-semibold text-foreground">Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {recentActivity.map((item) => (
+              <div key={item.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="w-2 h-2 rounded-full bg-blue-400 dark:bg-blue-600" />
+                <span>{item.message}</span>
+                <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{item.time}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Quick Actions Section */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-full" />
           <h2 className="text-xl font-semibold text-foreground">Quick Actions</h2>
         </div>
-        
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {quickActions.map((action, index) => (
             <Link key={action.title} href={action.href}>
-              <Card className="p-4 hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-200 hover:scale-[1.02] cursor-pointer border-border/50 hover:border-border group">
+              <Card className="p-4 hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-200 hover:scale-[1.02] cursor-pointer border-border/50 hover:border-border group bg-white dark:bg-zinc-900">
                 <div className="flex items-center space-x-3">
                   <div className="p-2 rounded-lg bg-muted group-hover:bg-muted/80 transition-colors duration-200">
                     <div className={action.color}>
