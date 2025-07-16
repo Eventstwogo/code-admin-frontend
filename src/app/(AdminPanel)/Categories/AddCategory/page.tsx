@@ -1,381 +1,33 @@
-
-// "use client";
-
-// import React, { useEffect, useState } from "react";
-// import slugify from "slugify";
-// import { useRouter, useSearchParams } from "next/navigation";
-// import { useForm } from "react-hook-form";
-// import { z } from "zod";
-// import { zodResolver } from "@hookform/resolvers/zod";
-// import { Input } from "@/components/ui/input";
-// import axiosInstance from "@/lib/axiosInstance";
-// import { toast } from "sonner";
-
-// // Zod Schema
-// const categorySchema = z.object({
-//   name: z
-//     .string()
-//     .min(3, "Category name must be at least 3 characters")
-//     .max(50, "Category name must not exceed 50 characters")
-//     .regex(/^[A-Za-z0-9\s-]+$/, "Only letters, numbers, spaces, and hyphens allowed")
-//     .refine((val) => val.trim().length > 0, {
-//       message: "Category name cannot be just spaces",
-//     }),
-//   slug: z
-//     .string()
-//     .min(1, "Slug is required")
-//     .refine((val) => !/<[^>]*script.*?>|('|--|;|\/\*|\*\/|xp_)/gi.test(val), {
-//       message: "Slug contains potentially dangerous content",
-//     }),
-//   description: z
-//     .string()
-//     .max(500, "Description must be less than 500 characters")
-//     .optional()
-//     .or(z.literal("")),
-//   metaTitle: z
-//     .string()
-//     .max(70, "Meta title must be less than 70 characters")
-//     .optional()
-//     .or(z.literal("")),
-//   metaDescription: z
-//     .string()
-//     .max(160, "Meta description must be less than 160 characters")
-//     .optional()
-//     .or(z.literal("")),
-//   parent: z.string().optional(),
-//   features: z.object({
-//     featured: z.boolean(),
-//     homepage: z.boolean(),
-//     promotions: z.boolean(),
-//   }),
-// });
-
-// type CategoryFormData = z.infer<typeof categorySchema>;
-
-// const CategoryCreation = () => {
-//   const router = useRouter();
-//   const searchParams = useSearchParams();
-//   const categoryId = searchParams.get("id");
-
-//   const [categories, setCategories] = useState([]);
-//   const [imagePreview, setImagePreview] = useState<string | null>(null);
-//   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
-
-//   const {
-//     register,
-//     handleSubmit,
-//     watch,
-//     setValue,
-//     formState: { errors },
-//   } = useForm<CategoryFormData>({
-//     resolver: zodResolver(categorySchema),
-//     defaultValues: {
-//       name: "",
-//       slug: "",
-//       description: "",
-//       metaTitle: "",
-//       metaDescription: "",
-//       parent: "",
-//       features: {
-//         featured: false,
-//         homepage: false,
-//         promotions: false,
-//       },
-//     },
-//   });
-
-//   const name = watch("name");
-
-
-
-//   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-//     const file = e.target.files?.[0];
-//     setSelectedImageFile(file);
-//     if (file) {
-//       const reader = new FileReader();
-//       reader.onloadend = () => setImagePreview(reader.result as string);
-//       reader.readAsDataURL(file);
-//     }
-//   };
-
-//   const handleImageRemove = () => {
-//     setImagePreview(null);
-//     setSelectedImageFile(null);
-//   };
-
-//   const handleBack = () => {
-//     router.push("/Categories");
-//   };
-
-//   const fetchCategories = async () => {
-//     try {
-//       const response = await axiosInstance.get("/api/v1/categories/?status_filter=false");
-//       setCategories(response.data.data);
-//     } catch (error) {
-//       console.error("Failed to fetch categories:", error);
-//     }
-//   };
-
-//   const fetchCategory = async (id: string) => {
-//     try {
-//       const response = await axiosInstance.get(`api/v1/categories_or_subcategories_by_id/details/${id}`);
-//       const category = response.data.data;
-// console.log(category)
-//       setValue("name", category.category_name || category.subcategory_name);
-//       setValue("slug", category.category_slug|| category.subcategory_slug);
-//       setValue("description", category.category_description ||category.subcategory_description || "");
-//       setValue("metaTitle", category.category_meta_title ||category.subcategory_meta_titl||'');
-//       setValue("metaDescription", category.category_meta_description ||category.subcategory_meta_description|| "");
-//       setValue("parent", category.category_id || "");
-//       setValue("features", {
-//         featured: category.featured_category || category.featured_subcategory,
-//         homepage: category.show_in_menu,
-//         promotions: false,
-//       });
-
-//       if (category.category_img_thumbnail||category.subcategory_img_thumbnail) {
-//         setImagePreview(`${category.category_img_thumbnail || category.subcategory_img_thumbnail}`);
-//       }
-//     } catch (error) {
-//       console.error("Failed to fetch category:", error);
-//     }
-//   };
-
-//   useEffect(() => {
-//     fetchCategories();
-//     if (categoryId) fetchCategory(categoryId);
-//   }, [categoryId]);
-// console.log(imagePreview)
-//   const onSubmit = async (data: CategoryFormData) => {
-//     try {
-//       const formData = new FormData();
-
-//       formData.append("name", data.name);
-//       formData.append("slug", data.slug);
-//       formData.append("description", data.description || "");
-//       formData.append("meta_title", data.metaTitle || "");
-//       formData.append("meta_description", data.metaDescription || "");
-//       formData.append("category_id", data.parent || "");
-//       formData.append("featured", String(data.features.featured));
-//       formData.append("show_in_menu", String(data.features.homepage));
-
-//       if (selectedImageFile) {
-//         formData.append("file", selectedImageFile);
-//       }
-
-//       const endpoint = categoryId
-//         ? `/api/v1/categories_or_subcategories_by_id/update/${categoryId}`
-//         : "/api/v1/categories/create";
-//       const method = categoryId ? "put" : "post";
-
-//       const response = await axiosInstance[method](endpoint, formData, {
-//         headers: { "Content-Type": "multipart/form-data" },
-//       });
-
-//       if (response.data.statusCode === 200 || response.data.statusCode === 201) {
-//         toast.success(response.data.message);
-//         router.push("/Categories");
-//       }
-//     } catch (error: any) {
-//       const message =
-//         error?.response?.data?.detail?.message || "Failed to save category.";
-//       toast.error(message);
-//       console.error("Error saving category:", error);
-//     }
-//   };
-
-//   return (
-//     <div className="bg-gray-50 pt-6 pb-6 px-4 md:px-8">
-//       <div className="max-w-6xl mx-auto text-sm">
-//         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-//           <button
-//             onClick={handleBack}
-//             className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 cursor-pointer"
-//           >
-//             ← Back
-//           </button>
-//           <div className="flex gap-2">
-//             <button
-//               type="submit"
-//               form="category-form"
-//               className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 cursor-pointer"
-//             >
-//               {categoryId ? "Update Category" : "Save Category"}
-//             </button>
-//             <button
-//               onClick={handleBack}
-//               className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-100 cursor-pointer"
-//             >
-//               Cancel
-//             </button>
-//           </div>
-//         </div>
-
-//         <form
-//           id="category-form"
-//           onSubmit={handleSubmit(onSubmit)}
-//           className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"
-//         >
-//           {/* Upload Image Card */}
-//           <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
-//             <h2 className="text-lg font-semibold text-gray-800 mb-2">Upload Image</h2>
-//             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative">
-//               {imagePreview ? (
-//                 <>
-//                   <img
-//                     src={imagePreview}
-//                     alt="Preview"
-//                     className="mx-auto mb-4 h-52 object-contain rounded"
-//                   />
-//                   <button
-//                     type="button"
-//                     onClick={handleImageRemove}
-//                     className="absolute top-2 right-2 text-sm bg-red-500 text-white rounded px-2 py-1 cursor-pointer"
-//                   >
-//                     Remove
-//                   </button>
-//                 </>
-//               ) : (
-//                 <>
-//                   <svg
-//                     className="mx-auto h-20 w-20 text-gray-400"
-//                     fill="none"
-//                     stroke="currentColor"
-//                     viewBox="0 0 24 24"
-//                   >
-//                     <path
-//                       strokeLinecap="round"
-//                       strokeLinejoin="round"
-//                       strokeWidth="2"
-//                       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-//                     />
-//                   </svg>
-//                   <p className="mt-2 text-sm text-gray-600">Drag and drop your image here, or</p>
-//                   <label className="inline-block mt-2 cursor-pointer px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-//                     Browse Files
-//                     <input
-//                       type="file"
-//                       accept="image/*"
-//                       className="hidden"
-//                       onChange={handleImageChange}
-//                     />
-//                   </label>
-//                 </>
-//               )}
-//             </div>
-//           </div>
-
-//           {/* Category Details */}
-//           <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
-//             <h2 className="text-lg font-semibold text-gray-800 mb-2">Category Details</h2>
-//             <div>
-//               <label className="block mb-1 font-medium text-gray-700">Category Name</label>
-//               <input
-//                 type="text"
-//                 {...register("name")}
-//                 className="w-full px-3 py-2 border rounded-md"
-//                 placeholder="Enter category name"
-//               />
-//               {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
-
-//               <label className="block mt-3 mb-1 font-medium text-gray-700">Slug</label>
-//               <Input
-//                 type="text"
-//                 {...register("slug")}
-//                 className="w-full px-3 py-2 border rounded-md"
-//                 placeholder="Slug"
-//                 disabled
-//               />
-//               {errors.slug && <p className="text-red-500 text-sm mt-1">{errors.slug.message}</p>}
-
-//               <label className="block mt-3 mb-1 font-medium text-gray-700">Description</label>
-//               <textarea
-//                 {...register("description")}
-//                 rows={4}
-//                 className="w-full px-3 py-2 border rounded-md max-h-50 min-h-10"
-//                 placeholder="Description"
-//                 maxLength={501}
-//               />
-//               {errors.description && (
-//                 <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
-//               )}
-
-//               <label className="block mt-3 mb-1 font-medium text-gray-700">Parent Category</label>
-//               <select {...register("parent")} className="w-full px-3 py-2 border rounded-md">
-//                 <option value="">Select parent category (if applicable)</option>
-//                 {categories.map((category: any) => (
-//                   <option key={category.id} value={category.category_id}>
-//                     {category.category_name}
-//                   </option>
-//                 ))}
-//               </select>
-//             </div>
-//           </div>
-
-//           {/* Features */}
-//           <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
-//             <h2 className="text-lg font-semibold text-gray-800 mb-2">Features</h2>
-//             <div className="space-y-3">
-//               {["featured", "homepage", "promotions"].map((feature) => (
-//                 <label key={feature} className="flex items-center gap-2">
-//                   <input
-//                     type="checkbox"
-//                     {...register(`features.${feature}` as const)}
-//                     className="h-4 w-4"
-//                   />
-//                   {feature.charAt(0).toUpperCase() + feature.slice(1)}
-//                 </label>
-//               ))}
-//             </div>
-//           </div>
-
-//           {/* SEO Fields */}
-//           <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
-//             <h2 className="text-lg font-semibold text-gray-800 mb-2">SEO Optimization</h2>
-
-//             <label className="block mb-1 font-medium text-gray-700">Meta Title</label>
-//             <input
-//               type="text"
-//               {...register("metaTitle")}
-//               className="w-full px-3 py-2 border rounded-md"
-//               placeholder="SEO title"
-//             />
-//             {errors.metaTitle && (
-//               <p className="text-red-500 text-sm mt-1">{errors.metaTitle.message}</p>
-//             )}
-
-//             <label className="block mt-3 mb-1 font-medium text-gray-700">Meta Description</label>
-//             <textarea
-//               {...register("metaDescription")}
-//               rows={3}
-//               className="w-full px-3 py-2 border rounded-md max-h-40 min-h-10"
-//               placeholder="Short SEO description"
-//               maxLength={161}
-//             />
-//             {errors.metaDescription && (
-//               <p className="text-red-500 text-sm mt-1">{errors.metaDescription.message}</p>
-//             )}
-//           </div>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default CategoryCreation;
-
-
 "use client";
 
 import React, { useEffect, useState } from "react";
 import slugify from "slugify";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { 
+  ArrowLeft, 
+  Upload, 
+  X, 
+  Save, 
+  Eye, 
+  EyeOff, 
+  Image as ImageIcon,
+  AlertCircle,
+  CheckCircle2
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { CategoryFormSkeleton } from "@/components/CategoryFormSkeleton";
 import axiosInstance from "@/lib/axiosInstance";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 // Zod Schema
 const categorySchema = z.object({
@@ -427,12 +79,16 @@ const CategoryCreation = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [nameTouched, setNameTouched] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    control,
     formState: { errors },
   } = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
@@ -442,7 +98,7 @@ const CategoryCreation = () => {
       description: "",
       metaTitle: "",
       metaDescription: "",
-      parent: "",
+      parent: "none",
       features: {
         featured: false,
         homepage: false,
@@ -462,8 +118,20 @@ const CategoryCreation = () => {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    setSelectedImageFile(file);
     if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file');
+        return;
+      }
+      
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size should be less than 5MB');
+        return;
+      }
+      
+      setSelectedImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => setImagePreview(reader.result as string);
       reader.readAsDataURL(file);
@@ -473,6 +141,44 @@ const CategoryCreation = () => {
   const handleImageRemove = () => {
     setImagePreview(null);
     setSelectedImageFile(null);
+    // Reset file input
+    const fileInput = document.getElementById('image-upload') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      const file = files[0];
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file');
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size should be less than 5MB');
+        return;
+      }
+      
+      setSelectedImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleBack = () => {
@@ -485,12 +191,13 @@ const CategoryCreation = () => {
       setCategories(response.data.data);
     } catch (error) {
       console.error("Failed to fetch categories:", error);
+      toast.error("Failed to load categories");
     }
   };
 
   const fetchCategory = async (id: string) => {
     try {
-      const response = await axiosInstance.get(`api/v1/categories_or_subcategories_by_id/details/${id}`);
+      const response = await axiosInstance.get(`api/v1/category-items/${id}`);
       const category = response.data.data;
 
       setValue("name", category.category_name || category.subcategory_name || "");
@@ -498,7 +205,7 @@ const CategoryCreation = () => {
       setValue("description", category.category_description || category.subcategory_description || "");
       setValue("metaTitle", category.category_meta_title || category.subcategory_meta_titl || "");
       setValue("metaDescription", category.category_meta_description || category.subcategory_meta_description || "");
-      setValue("parent", category.category_id || "");
+      setValue("parent", category.category_id || "none");
       setValue("features", {
         featured: category.featured_category || category.featured_subcategory,
         homepage: category.show_in_menu,
@@ -512,15 +219,30 @@ const CategoryCreation = () => {
       }
     } catch (error) {
       console.error("Failed to fetch category:", error);
+      toast.error("Failed to load category details");
     }
   };
 
   useEffect(() => {
-    fetchCategories();
-    if (categoryId) fetchCategory(categoryId);
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        await fetchCategories();
+        if (categoryId) {
+          await fetchCategory(categoryId);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
   }, [categoryId]);
 
   const onSubmit = async (data: CategoryFormData) => {
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
     try {
       const formData = new FormData();
 
@@ -529,7 +251,7 @@ const CategoryCreation = () => {
       formData.append("description", data.description || "");
       formData.append("meta_title", data.metaTitle || "");
       formData.append("meta_description", data.metaDescription || "");
-      formData.append("category_id", data.parent || "");
+      formData.append("category_id", data.parent === "none" ? "" : data.parent || "");
       formData.append("featured", String(data.features.featured));
       formData.append("show_in_menu", String(data.features.homepage));
 
@@ -538,8 +260,8 @@ const CategoryCreation = () => {
       }
 
       const endpoint = categoryId
-        ? `/api/v1/categories_or_subcategories_by_id/update/${categoryId}`
-        : "/api/v1/categories/create";
+        ? `/api/v1/category-items/${categoryId}`
+        : "/api/v1/categories/";
       const method = categoryId ? "put" : "post";
 
       const response = await axiosInstance[method](endpoint, formData, {
@@ -547,193 +269,356 @@ const CategoryCreation = () => {
       });
 
       if (response.data.statusCode === 200 || response.data.statusCode === 201) {
-        toast.success(response.data.message);
+        toast.success(response.data.message || `Category ${categoryId ? 'updated' : 'created'} successfully!`);
         router.push("/Categories");
       }
     } catch (error: any) {
       const message =
-        error?.response?.data?.detail?.message || "Failed to save category.";
+        error?.response?.data?.detail?.message || 
+        error?.response?.data?.message ||
+        `Failed to ${categoryId ? 'update' : 'create'} category.`;
       toast.error(message);
       console.error("Error saving category:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  if (isLoading) {
+    return <CategoryFormSkeleton />;
+  }
+
   return (
-    <div className="bg-gray-50 pt-6 pb-6 px-4 md:px-8">
-      <div className="max-w-6xl mx-auto text-sm">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <button
+    <div className="min-h-screen bg-background transition-colors duration-200 custom-scrollbar">
+      <div className="container mx-auto px-4 py-6 max-w-7xl animate-in fade-in-0 duration-500">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <Button
+            variant="outline"
             onClick={handleBack}
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 cursor-pointer"
+            className="flex items-center gap-2 hover:bg-accent transition-colors"
           >
-            ← Back
-          </button>
-          <div className="flex gap-2">
-            <button
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+          <div className="flex gap-3">
+            <Button
               type="submit"
               form="category-form"
-              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 cursor-pointer"
+              disabled={isSubmitting}
+              className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
             >
-              {categoryId ? "Update Category" : "Save Category"}
-            </button>
-            <button
+              {isSubmitting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  {categoryId ? "Updating..." : "Saving..."}
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  {categoryId ? "Update Category" : "Save Category"}
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
               onClick={handleBack}
-              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-100 cursor-pointer"
+              disabled={isSubmitting}
+              className="hover:bg-accent transition-colors"
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
 
         <form
           id="category-form"
           onSubmit={handleSubmit(onSubmit)}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
         >
           {/* Upload Image Card */}
-          <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">Upload Image</h2>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center relative">
-              {imagePreview ? (
-                <>
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="mx-auto mb-4 h-52 object-contain rounded"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleImageRemove}
-                    className="absolute top-2 right-2 text-sm bg-red-500 text-white rounded px-2 py-1 cursor-pointer"
-                  >
-                    Remove
-                  </button>
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="mx-auto h-20 w-20 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+          <Card className="h-fit border-border/50 shadow-sm card-hover">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <ImageIcon className="h-5 w-5" />
+                Upload Image
+              </CardTitle>
+              <CardDescription>
+                Upload a category image (Max 5MB, JPG/PNG/GIF)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div
+                className={cn(
+                  "border-2 border-dashed rounded-lg p-8 text-center relative transition-all duration-200",
+                  dragActive
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:border-primary/50 hover:bg-accent/20"
+                )}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+              >
+                {imagePreview ? (
+                  <div className="relative">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="mx-auto mb-4 h-52 w-full object-contain rounded-lg border border-border"
                     />
-                  </svg>
-                  <p className="mt-2 text-sm text-gray-600">Drag and drop your image here, or</p>
-                  <label className="inline-block mt-2 cursor-pointer px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
-                    Browse Files
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleImageChange}
-                    />
-                  </label>
-                </>
-              )}
-            </div>
-          </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleImageRemove}
+                      className="absolute top-2 right-2 h-8 w-8 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <Upload className="mx-auto h-16 w-16 text-muted-foreground" />
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Drag and drop your image here, or
+                      </p>
+                      <Label
+                        htmlFor="image-upload"
+                        className="inline-flex items-center gap-2 cursor-pointer px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Browse Files
+                      </Label>
+                      <Input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageChange}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Category Details */}
-          <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">Category Details</h2>
-            <div>
-              <label className="block mb-1 font-medium text-gray-700">Category Name</label>
-              <input
-                type="text"
-                {...register("name")}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="Enter category name"
-                onChange={(e) => {
-                  setValue("name", e.target.value);
-                  setNameTouched(true);
-                }}
-              />
-              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+          <Card className="border-border/50 shadow-sm card-hover">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-foreground">Category Details</CardTitle>
+              <CardDescription>
+                Basic information about the category
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium text-foreground">
+                  Category Name *
+                </Label>
+                <Input
+                  id="name"
+                  type="text"
+                  {...register("name")}
+                  placeholder="Enter category name"
+                  className={cn(
+                    "form-field-animate",
+                    errors.name && "border-destructive focus:border-destructive"
+                  )}
+                  onChange={(e) => {
+                    setValue("name", e.target.value);
+                    setNameTouched(true);
+                  }}
+                />
+                {errors.name && (
+                  <div className="flex items-center gap-2 text-destructive text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    {errors.name.message}
+                  </div>
+                )}
+              </div>
 
-              <label className="block mt-3 mb-1 font-medium text-gray-700">Slug</label>
-              <Input
-                type="text"
-                {...register("slug")}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="Slug"
-                disabled
-              />
-              {errors.slug && <p className="text-red-500 text-sm mt-1">{errors.slug.message}</p>}
+              <div className="space-y-2">
+                <Label htmlFor="slug" className="text-sm font-medium text-foreground">
+                  Slug
+                </Label>
+                <Input
+                  id="slug"
+                  type="text"
+                  {...register("slug")}
+                  placeholder="Auto-generated from name"
+                  disabled
+                  className="bg-muted text-muted-foreground"
+                />
+                {errors.slug && (
+                  <div className="flex items-center gap-2 text-destructive text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    {errors.slug.message}
+                  </div>
+                )}
+              </div>
 
-              <label className="block mt-3 mb-1 font-medium text-gray-700">Description</label>
-              <textarea
-                {...register("description")}
-                rows={4}
-                className="w-full px-3 py-2 border rounded-md max-h-50 min-h-10"
-                placeholder="Description"
-                maxLength={501}
-              />
-              {errors.description && (
-                <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-sm font-medium text-foreground">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  {...register("description")}
+                  rows={4}
+                  placeholder="Enter category description"
+                  className={cn(
+                    "resize-none form-field-animate",
+                    errors.description && "border-destructive focus:border-destructive"
+                  )}
+                  maxLength={500}
+                />
+                {errors.description && (
+                  <div className="flex items-center gap-2 text-destructive text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    {errors.description.message}
+                  </div>
+                )}
+              </div>
 
-              <label className="block mt-3 mb-1 font-medium text-gray-700">Parent Category</label>
-              <select {...register("parent")} className="w-full px-3 py-2 border rounded-md">
-                <option value="">Select parent category (if applicable)</option>
-                {categories.map((category: any) => (
-                  <option key={category.id} value={category.category_id}>
-                    {category.category_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="parent" className="text-sm font-medium text-foreground">
+                  Parent Category
+                </Label>
+                <Controller
+                  name="parent"
+                  control={control}
+                  render={({ field }) => (
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select parent category (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None (Root Category)</SelectItem>
+                        {categories.map((category: any) => (
+                          <SelectItem key={category.id} value={category.category_id}>
+                            {category.category_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Features */}
-          <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">Features</h2>
-            <div className="space-y-3">
-              {["featured", "homepage", "promotions"].map((feature) => (
-                <label key={feature} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    {...register(`features.${feature}` as const)}
-                    className="h-4 w-4"
+          <Card className="border-border/50 shadow-sm card-hover">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-foreground">
+                <CheckCircle2 className="h-5 w-5" />
+                Features
+              </CardTitle>
+              <CardDescription>
+                Configure category display options
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[
+                { key: "featured", label: "Featured Category", description: "Show in featured section" },
+                { key: "homepage", label: "Show in Menu", description: "Display in main navigation" },
+                { key: "promotions", label: "Promotions", description: "Enable for promotional content" }
+              ].map((feature) => (
+                <div key={feature.key} className="flex items-center justify-between p-4 rounded-lg border border-border/50 hover:bg-accent/20 transition-colors">
+                  <div className="flex-1">
+                    <Label htmlFor={feature.key} className="text-sm font-medium text-foreground cursor-pointer">
+                      {feature.label}
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {feature.description}
+                    </p>
+                  </div>
+                  <Controller
+                    name={`features.${feature.key}` as const}
+                    control={control}
+                    render={({ field }) => (
+                      <Switch
+                        id={feature.key}
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        className="ml-4"
+                      />
+                    )}
                   />
-                  {feature.charAt(0).toUpperCase() + feature.slice(1)}
-                </label>
+                </div>
               ))}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* SEO Fields */}
-          <div className="bg-white rounded-xl shadow-md p-4 md:p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-2">SEO Optimization</h2>
+          <Card className="border-border/50 shadow-sm card-hover">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-foreground">SEO Optimization</CardTitle>
+              <CardDescription>
+                Improve search engine visibility
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="metaTitle" className="text-sm font-medium text-foreground">
+                  Meta Title
+                </Label>
+                <Input
+                  id="metaTitle"
+                  type="text"
+                  {...register("metaTitle")}
+                  placeholder="SEO title (recommended: 50-60 characters)"
+                  className={cn(
+                    "transition-colors",
+                    errors.metaTitle && "border-destructive focus:border-destructive"
+                  )}
+                  maxLength={70}
+                />
+                <div className="flex justify-between items-center">
+                  {errors.metaTitle && (
+                    <div className="flex items-center gap-2 text-destructive text-sm">
+                      <AlertCircle className="h-4 w-4" />
+                      {errors.metaTitle.message}
+                    </div>
+                  )}
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {watch("metaTitle")?.length || 0}/70
+                  </span>
+                </div>
+              </div>
 
-            <label className="block mb-1 font-medium text-gray-700">Meta Title</label>
-            <input
-              type="text"
-              {...register("metaTitle")}
-              className="w-full px-3 py-2 border rounded-md"
-              placeholder="SEO title"
-            />
-            {errors.metaTitle && (
-              <p className="text-red-500 text-sm mt-1">{errors.metaTitle.message}</p>
-            )}
-
-            <label className="block mt-3 mb-1 font-medium text-gray-700">Meta Description</label>
-            <textarea
-              {...register("metaDescription")}
-              rows={3}
-              className="w-full px-3 py-2 border rounded-md max-h-40 min-h-10"
-              placeholder="Short SEO description"
-              maxLength={161}
-            />
-            {errors.metaDescription && (
-              <p className="text-red-500 text-sm mt-1">{errors.metaDescription.message}</p>
-            )}
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="metaDescription" className="text-sm font-medium text-foreground">
+                  Meta Description
+                </Label>
+                <Textarea
+                  id="metaDescription"
+                  {...register("metaDescription")}
+                  rows={3}
+                  placeholder="SEO description (recommended: 150-160 characters)"
+                  className={cn(
+                    "resize-none transition-colors",
+                    errors.metaDescription && "border-destructive focus:border-destructive"
+                  )}
+                  maxLength={160}
+                />
+                <div className="flex justify-between items-center">
+                  {errors.metaDescription && (
+                    <div className="flex items-center gap-2 text-destructive text-sm">
+                      <AlertCircle className="h-4 w-4" />
+                      {errors.metaDescription.message}
+                    </div>
+                  )}
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {watch("metaDescription")?.length || 0}/160
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </form>
       </div>
     </div>

@@ -12,8 +12,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="light" // 👈 set default to light
-      enableSystem={false} // 👈 disable system theme detection
+      defaultTheme="system"
+      enableSystem={true}
+      themes={['light', 'dark', 'system']}
+      storageKey="events2go-theme"
     >
       {children}
     </NextThemesProvider>

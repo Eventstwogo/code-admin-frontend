@@ -45,7 +45,7 @@ export default function ResetPasswordPage() {
 
     setError("");
     try{
-      const response= await axiosInstance.patch('/api/v1/admin-auth/reset-password',{
+      const response= await axiosInstance.patch('/api/v1/admin/reset-password',{
         email:email,
         new_password:newPassword
       })

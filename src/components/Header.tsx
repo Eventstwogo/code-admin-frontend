@@ -149,7 +149,7 @@ export default function AppHeader({ toggleSidebar }: AppHeaderProps) {
 
   const fetchUserDetails=async(userId)=>{
     try{
-      const response=axiosInstance.get(`/api/v1/admin-users/admin-users/${userId}`)
+      const response=axiosInstance.get(`/api/v1/admin/users/${userId}`)
 setUser((await response).data.data)
 setLoading(false)
     }
