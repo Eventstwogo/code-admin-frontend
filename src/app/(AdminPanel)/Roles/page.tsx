@@ -1,249 +1,396 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  useReactTable,
-  getCoreRowModel,
-  flexRender,
-  ColumnDef,
+  SortingState,
+  ColumnFiltersState,
 } from '@tanstack/react-table';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
+  Plus, 
+  Shield, 
+  Key, 
+  Link2,
+  Search,
+  Settings
+} from 'lucide-react';
+import { Role, Permission } from '@/services/rbac';
+import dynamic from 'next/dynamic';
 
-const permissionList = ['View', 'Edit', 'Delete'];
+// Import our new components
+import { useRBACData } from './components/hooks/useRBACData';
+import { useRoleActions } from './components/hooks/useRoleActions';
+import { usePermissionActions } from './components/hooks/usePermissionActions';
+import { useRolePermissionActions } from './components/hooks/useRolePermissionActions';
+import { StatsCards } from './components/StatsCards';
+import { RoleForm } from './components/RoleForm';
+import { PermissionForm } from './components/PermissionForm';
+import { RolePermissionForm } from './components/RolePermissionForm';
+import { RoleTable } from './components/RoleTable';
+import { PermissionTable } from './components/PermissionTable';
+import { RolePermissionTable } from './components/RolePermissionTable';
+import { DeleteConfirmState, RoleFormData, PermissionFormData, RolePermissionFormData } from './components/types';
 
-type Role = {
-  id: number;
-  name: string;
-  permissions: string[];
-  status: boolean;
-};
+const ConfirmDialog = dynamic(() => import('@/components/ConfirmDialog').then(mod => mod.ConfirmDialog), { ssr: false });
 
-const roleSchema = z.object({
-  name: z.string().min(2, 'Role name is required'),
-  permissions: z.array(z.string()).min(1, 'At least one permission is required'),
-});
-
-type RoleFormData = z.infer<typeof roleSchema>;
-
-const columns: ColumnDef<Role>[] = [
-  { accessorKey: 'id', header: 'ID' },
-  { accessorKey: 'name', header: 'Role Name' },
-  {
-    accessorKey: 'permissions',
-    header: 'Permissions',
-    cell: ({ row }) => (
-      <ul className="list-none list-inside text-xs flex gap-3">
-        {(row.getValue('permissions') as string[]).map((p) => (
-          <li key={p} className='px-2 border-1 border-black-100 rounded-sm' >{p}</li>
-        ))}
-      </ul>
-    ),
-  },
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: ({ row }) => (
-      <span className={row.original.status ? 'text-green-600' : 'text-gray-500'}>
-        {row.original.status ? 'Active' : 'Inactive'}
-      </span>
-    ),
-  },
-  {
-    id: 'actions',
-    header: 'Actions',
-    cell: ({ row }) => (
-      <div className="flex space-x-2">
-        <Button size="sm" variant="outline" onClick={() => handleEdit(row.original)} className='cursor-pointer'>
-          Edit
-        </Button>
-        <Button size="sm" variant="destructive" onClick={() => handleDelete(row.original.id)} className='cursor-pointer'>
-          Delete
-        </Button>
-      </div>
-    ),
-  },
-];
-
-let handleEdit = (_role: Role) => {};
-let handleDelete = (_id: number) => {};
-
-export default function RolesPage() {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [roles, setRoles] = useState<Role[]>([
-    { id: 1, name: 'Admin', permissions: ['View', 'Edit', 'Delete'], status: true },
-    { id: 2, name: 'Editor', permissions: ['View', 'Edit'], status: true },
-    { id: 3, name: 'Viewer', permissions: ['View'], status: false },
-  ]);
+export default function RBACPage() {
+  // State management
+  const [activeTab, setActiveTab] = useState('roles');
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [globalFilter, setGlobalFilter] = useState('');
+  
+  // Dialog states
+  const [roleDialog, setRoleDialog] = useState(false);
+  const [permissionDialog, setPermissionDialog] = useState(false);
+  const [rolePermissionDialog, setRolePermissionDialog] = useState(false);
+  
+  // Editing states
   const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [editingPermission, setEditingPermission] = useState<Permission | null>(null);
+  
+  // Confirmation dialog state
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>({
+    open: false,
+    type: 'role',
+    id: '',
+    name: ''
+  });
+
+  // Custom hooks
+  const {
+    roles,
+    permissions,
+    rolePermissions,
+    rolesLoading,
+    permissionsLoading,
+    rolePermissionsLoading,
+    fetchRoles,
+    fetchPermissions,
+    fetchRolePermissions,
+  } = useRBACData();
 
   const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-    reset,
-  } = useForm<RoleFormData>({
-    resolver: zodResolver(roleSchema),
-    defaultValues: {
-      name: '',
-      permissions: [],
-    },
-  });
+    loading: roleLoading,
+    handleCreateRole,
+    handleUpdateRole,
+    handleDeleteRole,
+    handleToggleRoleStatus,
+  } = useRoleActions({ fetchRoles });
 
-  const table = useReactTable({
-    data: roles,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
+  const {
+    loading: permissionLoading,
+    handleCreatePermission,
+    handleUpdatePermission,
+    handleDeletePermission,
+    handleTogglePermissionStatus,
+  } = usePermissionActions({ fetchPermissions });
 
-  const onSubmit = async (data: RoleFormData) => {
-    setLoading(true);
-    try {
-      await new Promise((res) => setTimeout(res, 800));
-      if (editingRole) {
-        const updated = { ...editingRole, ...data };
-        setRoles((prev) => prev.map((r) => (r.id === editingRole.id ? updated : r)));
-        toast.success('Role updated');
-      } else {
-        const newRole = {
-          id: Date.now(),
-          ...data,
-          status: true,
-        };
-        setRoles((prev) => [...prev, newRole]);
-        toast.success('Role added');
-      }
-      reset();
+  const {
+    loading: rolePermissionLoading,
+    handleCreateRolePermission,
+    handleDeleteRolePermission,
+    handleToggleRolePermissionStatus,
+  } = useRolePermissionActions({ fetchRolePermissions });
+
+  // Form handlers
+  const handleRoleSubmit = async (data: RoleFormData) => {
+    if (editingRole) {
+      await handleUpdateRole(editingRole.role_id, data);
       setEditingRole(null);
-      setOpen(false);
-    } catch (err) {
-      toast.error('Something went wrong');
-    } finally {
-      setLoading(false);
+    } else {
+      await handleCreateRole(data);
     }
   };
 
-  const selectedPermissions = watch('permissions');
-
-  const handleCheckboxChange = (perm: string) => {
-    const current = new Set(selectedPermissions);
-    current.has(perm) ? current.delete(perm) : current.add(perm);
-    setValue('permissions', Array.from(current));
+  const handlePermissionSubmit = async (data: PermissionFormData) => {
+    if (editingPermission) {
+      await handleUpdatePermission(editingPermission.permission_id, data);
+      setEditingPermission(null);
+    } else {
+      await handleCreatePermission(data);
+    }
   };
 
-  handleEdit = (role: Role) => {
-    setValue('name', role.name);
-    setValue('permissions', role.permissions);
+  const handleRolePermissionSubmit = async (data: RolePermissionFormData) => {
+    await handleCreateRolePermission(data);
+  };
+
+  // Edit handlers
+  const handleEditRole = (role: Role) => {
     setEditingRole(role);
-    setOpen(true);
+    setRoleDialog(true);
   };
 
-  handleDelete = (id: number) => {
-    setRoles((prev) => prev.filter((r) => r.id !== id));
-    toast.success('Role deleted');
+  const handleEditPermission = (permission: Permission) => {
+    setEditingPermission(permission);
+    setPermissionDialog(true);
   };
+
+  // Dialog handlers
+  const handleOpenRoleDialog = () => {
+    setEditingRole(null);
+    setRoleDialog(true);
+  };
+
+  const handleOpenPermissionDialog = () => {
+    setEditingPermission(null);
+    setPermissionDialog(true);
+  };
+
+  const handleOpenRolePermissionDialog = () => {
+    setRolePermissionDialog(true);
+  };
+
+  // Dialog close handlers
+  const handleCloseRoleDialog = (open: boolean) => {
+    setRoleDialog(open);
+    if (!open) {
+      setEditingRole(null);
+    }
+  };
+
+  const handleClosePermissionDialog = (open: boolean) => {
+    setPermissionDialog(open);
+    if (!open) {
+      setEditingPermission(null);
+    }
+  };
+
+  const handleCloseRolePermissionDialog = (open: boolean) => {
+    setRolePermissionDialog(open);
+  };
+
+  const handleCloseDeleteConfirm = (open: boolean) => {
+    setDeleteConfirm(prev => ({ ...prev, open }));
+  };
+
+  // Delete confirmation handler
+  const handleDeleteConfirm = () => {
+    if (deleteConfirm.type === 'role') {
+      handleDeleteRole(deleteConfirm.id);
+    } else if (deleteConfirm.type === 'permission') {
+      handleDeletePermission(deleteConfirm.id);
+    } else if (deleteConfirm.type === 'rolePermission') {
+      handleDeleteRolePermission(deleteConfirm.id);
+    }
+    setDeleteConfirm({ open: false, type: 'role', id: '', name: '' });
+  };
+
+  const isStatsLoading = rolesLoading || permissionsLoading || rolePermissionsLoading;
 
   return (
-    <div className="p-4 space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold">Roles</h2>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button className='cursor-pointer'>{editingRole ? 'Edit Role' : 'Add Role'}</Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[400px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingRole ? 'Edit Role' : 'Add New Role'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4 pb-6">
-              <div>
-                <Label htmlFor="name" className='mb-2'>Role Name</Label>
-                <Input id="name" {...register('name')} />
-                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
-              </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-6 space-y-8">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Settings className="h-6 w-6 text-primary" />
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">RBAC Management</h1>
+            </div>
+            <p className="text-muted-foreground">
+              Manage roles, permissions, and their relationships for comprehensive access control
+            </p>
+          </div>
+        </div>
 
-              <div>
-                <Label className="mb-2 block">Permissions</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {permissionList.map((perm) => (
-                    <label key={perm} className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={selectedPermissions.includes(perm)}
-                        onCheckedChange={() => handleCheckboxChange(perm)}
-                      />
-                      <span className="text-sm">{perm}</span>
-                    </label>
-                  ))}
+        {/* Stats Cards */}
+        <StatsCards 
+          roles={roles}
+          permissions={permissions}
+          rolePermissions={rolePermissions}
+          isLoading={isStatsLoading}
+        />
+
+        {/* Main Content */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="roles" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Roles
+            </TabsTrigger>
+            <TabsTrigger value="permissions" className="flex items-center gap-2">
+              <Key className="h-4 w-4" />
+              Permissions
+            </TabsTrigger>
+            <TabsTrigger value="role-permissions" className="flex items-center gap-2">
+              <Link2 className="h-4 w-4" />
+              Role-Permissions
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Roles Tab */}
+          <TabsContent value="roles" className="space-y-6">
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Roles Management
+                  </CardTitle>
                 </div>
-                {errors.permissions && (
-                  <p className="text-red-500 text-sm mt-1">{errors.permissions.message}</p>
-                )}
-              </div>
-              <Button type="submit" disabled={loading} className="w-full cursor-pointer">
-                {loading ? 'Submitting...' : editingRole ? 'Update Role' : 'Add Role'}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search roles..."
+                      value={globalFilter ?? ''}
+                      onChange={(e) => setGlobalFilter(e.target.value)}
+                      className="pl-8 w-64"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleOpenRoleDialog}
+                    className="gap-2 shadow-sm"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Role
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <RoleTable
+                  roles={roles}
+                  loading={rolesLoading}
+                  sorting={sorting}
+                  setSorting={setSorting}
+                  columnFilters={columnFilters}
+                  setColumnFilters={setColumnFilters}
+                  globalFilter={globalFilter}
+                  setGlobalFilter={setGlobalFilter}
+                  onEdit={handleEditRole}
+                  onDelete={setDeleteConfirm}
+                  onToggleStatus={handleToggleRoleStatus}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((group) => (
-              <TableRow key={group.id}>
-                {group.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="text-center">
-                  No roles available.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+          {/* Permissions Tab */}
+          <TabsContent value="permissions" className="space-y-6">
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Key className="h-5 w-5" />
+                    Permissions Management
+                  </CardTitle>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search permissions..."
+                      value={globalFilter ?? ''}
+                      onChange={(e) => setGlobalFilter(e.target.value)}
+                      className="pl-8 w-64"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleOpenPermissionDialog}
+                    className="gap-2 shadow-sm"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Permission
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <PermissionTable
+                  permissions={permissions}
+                  loading={permissionsLoading}
+                  sorting={sorting}
+                  setSorting={setSorting}
+                  columnFilters={columnFilters}
+                  setColumnFilters={setColumnFilters}
+                  globalFilter={globalFilter}
+                  setGlobalFilter={setGlobalFilter}
+                  onEdit={handleEditPermission}
+                  onDelete={setDeleteConfirm}
+                  onToggleStatus={handleTogglePermissionStatus}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Role-Permissions Tab */}
+          <TabsContent value="role-permissions" className="space-y-6">
+            <Card className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Link2 className="h-5 w-5" />
+                    Role-Permission Relationships
+                  </CardTitle>
+                </div>
+                <Button 
+                  onClick={handleOpenRolePermissionDialog}
+                  className="gap-2 shadow-sm"
+                >
+                  <Plus className="h-4 w-4" />
+                  Assign Permissions
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0">
+                <RolePermissionTable
+                  rolePermissions={rolePermissions}
+                  roles={roles}
+                  permissions={permissions}
+                  loading={rolePermissionsLoading}
+                  sorting={sorting}
+                  setSorting={setSorting}
+                  columnFilters={columnFilters}
+                  setColumnFilters={setColumnFilters}
+                  globalFilter={globalFilter}
+                  setGlobalFilter={setGlobalFilter}
+                  onDelete={setDeleteConfirm}
+                  onToggleStatus={handleToggleRolePermissionStatus}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Forms */}
+        <RoleForm
+          open={roleDialog}
+          onOpenChange={handleCloseRoleDialog}
+          editingRole={editingRole}
+          onSubmit={handleRoleSubmit}
+          loading={roleLoading}
+        />
+
+        <PermissionForm
+          open={permissionDialog}
+          onOpenChange={handleClosePermissionDialog}
+          editingPermission={editingPermission}
+          onSubmit={handlePermissionSubmit}
+          loading={permissionLoading}
+        />
+
+        <RolePermissionForm
+          open={rolePermissionDialog}
+          onOpenChange={handleCloseRolePermissionDialog}
+          roles={roles}
+          permissions={permissions}
+          onSubmit={handleRolePermissionSubmit}
+          loading={rolePermissionLoading}
+        />
+
+        {/* Confirmation Dialog */}
+        <ConfirmDialog
+          open={deleteConfirm.open}
+          onOpenChange={handleCloseDeleteConfirm}
+          title={`Delete ${deleteConfirm.type === 'rolePermission' ? 'Role Permission' : deleteConfirm.type === 'role' ? 'Role' : 'Permission'}`}
+          description={`Are you sure you want to delete "${deleteConfirm.name}"? This action cannot be undone.`}
+          confirmText="Delete"
+          variant="destructive"
+          onConfirm={handleDeleteConfirm}
+        />
       </div>
     </div>
   );

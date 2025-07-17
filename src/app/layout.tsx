@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
+import AuthInit from "@/components/AuthInit";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -24,18 +25,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning is used to prevent hydration errors due to theme mismatch between server and client
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      > <ThemeProvider
-          attribute="class"
+      >
+        <ThemeProvider
+          attribute="class" // Ensures theme class is applied to <html> for SSR consistency
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-        {children}
-        <Toaster richColors />
-         </ThemeProvider>
+          <AuthInit />
+          {children}
+          <Toaster richColors />
+        </ThemeProvider>
       </body>
     </html>
   );

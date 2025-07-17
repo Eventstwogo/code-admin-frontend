@@ -17,7 +17,8 @@ interface AuthState {
   role: string | null;
   exp: number | null;
   isAuthenticated: boolean;
-  login: (token: string) => void;
+  sessionId: string | null;
+  login: (accessToken: string, refreshToken: string, sessionId: string) => void;
   logout: () => void;
   checkAuth: () => void;
 }
@@ -36,19 +37,23 @@ const useStore = create<StoreState>()(
       role: null,
       exp: null,
       isAuthenticated: false,
+      sessionId: null,
 
-      login: (token: string) => {
+      login: (accessToken: string, refreshToken: string, sessionId: string) => {
         try {
-          const decoded: any = jwt.decode(token);
-      console.log(decoded)
-          if (decoded?.user_id && decoded?.role_id) {
+          const decoded: any = jwt.decode(accessToken);
+          console.log(decoded)
+          if (decoded?.uid && decoded?.rid) {
             set({
-              userId: decoded.user_id,
-              role: decoded.role_id,
+              userId: decoded.uid,
+              role: decoded.rid,
               exp: decoded.exp,
               isAuthenticated: true,
+              sessionId: sessionId,
             });
-            localStorage.setItem("token", token);
+            localStorage.setItem("token", accessToken);
+            localStorage.setItem("refreshToken", refreshToken);
+            localStorage.setItem("sessionId", sessionId);
           }
         } catch (err) {
           console.error("JWT decode error:", err);
@@ -56,30 +61,65 @@ const useStore = create<StoreState>()(
       },
 
       logout: () => {
-        set({ userId: null, role: null, exp: null, isAuthenticated: false });
+        set({ userId: null, role: null, exp: null, isAuthenticated: false, sessionId: null });
         localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("sessionId");
       },
 
       checkAuth: () => {
         if (typeof window === "undefined") return;
 
         const token = localStorage.getItem("token");
+        const sessionId = localStorage.getItem("sessionId");
+        
         if (token) {
           try {
             const decoded: any = jwt.decode(token);
-            if (decoded?.user_id && decoded?.role_id) {
-              set({
-                userId: decoded.user_id,
-                role: decoded.role_id,
-                exp: decoded.exp,
-                isAuthenticated: true,
-              });
+            if (decoded?.uid && decoded?.rid && decoded?.exp) {
+              // Check if token is expired
+              const currentTime = Date.now() / 1000;
+              if (decoded.exp > currentTime) {
+                // Token is still valid
+                set({
+                  userId: decoded.uid,
+                  role: decoded.rid,
+                  exp: decoded.exp,
+                  isAuthenticated: true,
+                  sessionId: sessionId,
+                });
+                console.log("User authenticated with valid token");
+              } else {
+                // Token is expired, clear everything
+                console.log("Token expired, clearing authentication");
+                set({ userId: null, role: null, exp: null, isAuthenticated: false, sessionId: null });
+                localStorage.removeItem("token");
+                localStorage.removeItem("refreshToken");
+                localStorage.removeItem("sessionId");
+                localStorage.removeItem("id");
+              }
             } else {
+              // Invalid token structure
+              console.log("Invalid token structure");
+              set({ userId: null, role: null, exp: null, isAuthenticated: false, sessionId: null });
               localStorage.removeItem("token");
+              localStorage.removeItem("refreshToken");
+              localStorage.removeItem("sessionId");
+              localStorage.removeItem("id");
             }
           } catch {
+            // JWT decode error
+            console.log("JWT decode error");
+            set({ userId: null, role: null, exp: null, isAuthenticated: false, sessionId: null });
             localStorage.removeItem("token");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("sessionId");
+            localStorage.removeItem("id");
           }
+        } else {
+          // No token found
+          console.log("No token found");
+          set({ userId: null, role: null, exp: null, isAuthenticated: false, sessionId: null });
         }
       },
 

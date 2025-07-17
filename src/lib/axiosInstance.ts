@@ -34,18 +34,41 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   response => response,
   async error => {
-    if (error.response.status === 401) { // Unauthorized
+    if (error.response?.status === 401) { // Unauthorized
       try {
-        const refreshResponse = await axios.post('/refresh-token/', {}, {
-          withCredentials: true
-        });
-        const newToken = refreshResponse.data.token;
-        localStorage.setItem('token', newToken);
-        error.config.headers['Authorization'] = `Bearer ${newToken}`;
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
+        }
+
+        const refreshResponse = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/admin/token/refresh`,
+          { refresh_token: refreshToken },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'api-key': process.env.NEXT_PUBLIC_API_GATEWAY_KEY,
+            }
+          }
+        );
+
+        const { access_token, refresh_token: newRefreshToken, session_id } = refreshResponse.data.data;
+        
+        // Update tokens in localStorage
+        localStorage.setItem('token', access_token);
+        localStorage.setItem('refreshToken', newRefreshToken);
+        localStorage.setItem('sessionId', session_id.toString());
+
+        // Retry the original request with new token
+        error.config.headers['Authorization'] = `Bearer ${access_token}`;
         return axiosInstance(error.config);
       } catch (refreshError) {
+        // Clear all tokens and redirect to login
         localStorage.removeItem('token');
-        //  window.location.href = '/'; // Redirect to login
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('sessionId');
+        localStorage.removeItem('id');
+        window.location.href = '/'; // Redirect to login
         return Promise.reject(refreshError);
       }
     }

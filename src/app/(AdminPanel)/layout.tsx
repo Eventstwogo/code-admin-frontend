@@ -40,7 +40,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       />
 
       {/* Main Area */}
-      <div className={`flex-1 flex flex-col overflow-auto   ${isMobile?'':'rounded-tl-4xl bg-white shadow-sm  dark:bg-neutral-900'} `}>
+      <div className={`flex-1 flex flex-col overflow-auto   ${isMobile?'':'bg-white shadow-sm  dark:bg-neutral-900'} `}>
         <AppHeader collapsed={collapsed} toggleSidebar={toggleSidebar} />
         <main className="flex-1 p-6 sm:p-3">{children}</main>
       </div>
