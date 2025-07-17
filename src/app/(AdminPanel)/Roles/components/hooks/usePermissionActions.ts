@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import { permissionService } from '@/services/rbac';
 import { PermissionFormData } from '../types';
@@ -9,56 +9,96 @@ interface UsePermissionActionsProps {
 
 export function usePermissionActions({ fetchPermissions }: UsePermissionActionsProps) {
   const [loading, setLoading] = useState(false);
+  const isMountedRef = useRef(true);
 
-  const handleCreatePermission = async (data: PermissionFormData) => {
+  const handleCreatePermission = useCallback(async (data: PermissionFormData) => {
+    if (!isMountedRef.current) return;
+    
     try {
       setLoading(true);
       await permissionService.create(data.permission_name);
-      toast.success('Permission created successfully');
-      fetchPermissions();
+      
+      if (isMountedRef.current) {
+        toast.success('Permission created successfully');
+        await fetchPermissions();
+      }
     } catch (error) {
-      toast.error('Failed to create permission');
-      console.error('Error creating permission:', error);
+      if (isMountedRef.current) {
+        toast.error('Failed to create permission');
+        console.error('Error creating permission:', error);
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [fetchPermissions]);
 
-  const handleUpdatePermission = async (permissionId: string, data: PermissionFormData) => {
+  const handleUpdatePermission = useCallback(async (permissionId: string, data: PermissionFormData) => {
+    if (!isMountedRef.current) return;
+    
     try {
       setLoading(true);
       await permissionService.update(permissionId, data.permission_name);
-      toast.success('Permission updated successfully');
-      fetchPermissions();
+      
+      if (isMountedRef.current) {
+        toast.success('Permission updated successfully');
+        await fetchPermissions();
+      }
     } catch (error) {
-      toast.error('Failed to update permission');
-      console.error('Error updating permission:', error);
+      if (isMountedRef.current) {
+        toast.error('Failed to update permission');
+        console.error('Error updating permission:', error);
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [fetchPermissions]);
 
-  const handleDeletePermission = async (permissionId: string) => {
+  const handleDeletePermission = useCallback(async (permissionId: string) => {
+    if (!isMountedRef.current) return;
+    
     try {
       await permissionService.delete(permissionId);
-      toast.success('Permission deleted successfully');
-      fetchPermissions();
+      
+      if (isMountedRef.current) {
+        toast.success('Permission deleted successfully');
+        await fetchPermissions();
+      }
     } catch (error) {
-      toast.error('Failed to delete permission');
-      console.error('Error deleting permission:', error);
+      if (isMountedRef.current) {
+        toast.error('Failed to delete permission');
+        console.error('Error deleting permission:', error);
+      }
     }
-  };
+  }, [fetchPermissions]);
 
-  const handleTogglePermissionStatus = async (permissionId: string, status: boolean) => {
+  const handleTogglePermissionStatus = useCallback(async (permissionId: string, status: boolean) => {
+    if (!isMountedRef.current) return;
+    
     try {
       await permissionService.updateStatus(permissionId, status);
-      toast.success('Permission status updated successfully');
-      fetchPermissions();
+      
+      if (isMountedRef.current) {
+        toast.success('Permission status updated successfully');
+        await fetchPermissions();
+      }
     } catch (error) {
-      toast.error('Failed to update permission status');
-      console.error('Error updating permission status:', error);
+      if (isMountedRef.current) {
+        toast.error('Failed to update permission status');
+        console.error('Error updating permission status:', error);
+      }
     }
-  };
+  }, [fetchPermissions]);
+
+  // Cleanup effect to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   return {
     loading,

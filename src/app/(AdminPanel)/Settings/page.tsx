@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   Card,
   CardHeader,
@@ -57,8 +57,14 @@ const SettingsForm = () => {
     isEmpty: boolean;
   }>({ score: 0, requirements: [], isValid: false, isEmpty: true });
 
+  // Ref to track mounted state for cleanup
+  const isMountedRef = useRef(true);
+  
+  // Ref to store current blob URLs for cleanup
+  const blobUrlsRef = useRef<Set<string>>(new Set());
+
   // Enhanced password validation with strength calculation
-  const validatePassword = (password: string) => {
+  const validatePassword = useCallback((password: string) => {
     const hasUpper = /[A-Z]/.test(password);
     const hasLower = /[a-z]/.test(password);
     const hasDigit = /\d/.test(password);
@@ -66,10 +72,10 @@ const SettingsForm = () => {
     const isValidLength = password.length >= 8;
     
     return isValidLength && hasUpper && hasLower && hasDigit && hasSpecial;
-  };
+  }, []);
 
   // Calculate password strength with detailed requirements
-  const calculatePasswordStrength = (password: string) => {
+  const calculatePasswordStrength = useCallback((password: string) => {
     const requirements = [
       {
         id: 'length',
@@ -111,16 +117,16 @@ const SettingsForm = () => {
       isValid: score === 5,
       isEmpty: password.length === 0
     };
-  };
+  }, []);
 
   // Handle password change with strength calculation
-  const handlePasswordChange = (value: string) => {
+  const handlePasswordChange = useCallback((value: string) => {
     setDefaultPassword(value);
     setPasswordStrength(calculatePasswordStrength(value));
-  };
+  }, [calculatePasswordStrength]);
 
   // Enhanced logo file handling
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       // File size validation (10MB)
@@ -142,21 +148,23 @@ const SettingsForm = () => {
 
       setLogoFile(file);
       
-      // Create preview URL
+      // Create preview URL and track it for cleanup
       const previewUrl = URL.createObjectURL(file);
+      blobUrlsRef.current.add(previewUrl);
       setLogoPreview(previewUrl);
       
       toast.success("Logo uploaded successfully", {
         description: `File: ${file.name}`
       });
     }
-  };
+  }, []);
 
   // Remove logo
-  const handleRemoveLogo = () => {
+  const handleRemoveLogo = useCallback(() => {
     setLogoFile(null);
     if (logoPreview && logoPreview.startsWith('blob:')) {
       URL.revokeObjectURL(logoPreview);
+      blobUrlsRef.current.delete(logoPreview);
     }
     setLogoPreview(null);
     
@@ -167,15 +175,15 @@ const SettingsForm = () => {
     }
     
     toast.info("Logo removed");
-  };
+  }, [logoPreview]);
 
   // Fetch existing configuration with better error handling
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     try {
       setFetching(true);
       const response = await axiosInstance.get("/api/v1/config/");
       
-      if (response.data?.data) {
+      if (response.data?.data && isMountedRef.current) {
         const config = response.data.data;
         const password = config.default_password || "";
         
@@ -191,33 +199,42 @@ const SettingsForm = () => {
       }
     } catch (error: any) {
       console.error("Error fetching settings:", error);
-      const errorMessage = error?.response?.data?.detail || 
-                          error?.response?.data?.message || 
-                          "Failed to load settings";
-      
-      toast.error("Failed to load settings", {
-        description: errorMessage
-      });
+      if (isMountedRef.current) {
+        const errorMessage = error?.response?.data?.detail || 
+                            error?.response?.data?.message || 
+                            "Failed to load settings";
+        
+        toast.error("Failed to load settings", {
+          description: errorMessage
+        });
+      }
     } finally {
-      setFetching(false);
+      if (isMountedRef.current) {
+        setFetching(false);
+      }
     }
-  };
+  }, [calculatePasswordStrength]);
 
   useEffect(() => {
     fetchSettings();
-  }, []);
+  }, [fetchSettings]);
 
   // Cleanup blob URLs on unmount to prevent memory leaks
   useEffect(() => {
     return () => {
-      if (logoPreview && logoPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(logoPreview);
-      }
+      // Mark component as unmounted
+      isMountedRef.current = false;
+      
+      // Clean up all blob URLs
+      blobUrlsRef.current.forEach(url => {
+        URL.revokeObjectURL(url);
+      });
+      blobUrlsRef.current.clear();
     };
-  }, [logoPreview]);
+  }, []);
 
   // Enhanced save functionality with better validation and feedback
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     // Validate password
     if (!validatePassword(defaultPassword)) {
       toast.error("Invalid password", {
@@ -250,46 +267,67 @@ const SettingsForm = () => {
         headers: { "Content-Type": "multipart/form-data" },
       });
       
-      toast.success("Settings updated successfully!", {
-        description: "All configuration changes have been saved."
-      });
-      
-      // Refresh settings to get updated data
-      await fetchSettings();
-      
-      // Clear the logo file since it's now saved
-      setLogoFile(null);
+      if (isMountedRef.current) {
+        toast.success("Settings updated successfully!", {
+          description: "All configuration changes have been saved."
+        });
+        
+        // Refresh settings to get updated data
+        await fetchSettings();
+        
+        // Clear the logo file since it's now saved
+        setLogoFile(null);
+      }
       
     } catch (error: any) {
       console.error("Error updating settings:", error);
       
-      const errorMessage = error?.response?.data?.detail || 
-                          error?.response?.data?.message || 
-                          "Failed to update settings";
-      
-      toast.error("Update failed", {
-        description: errorMessage
-      });
+      if (isMountedRef.current) {
+        const errorMessage = error?.response?.data?.detail || 
+                            error?.response?.data?.message || 
+                            "Failed to update settings";
+        
+        toast.error("Update failed", {
+          description: errorMessage
+        });
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [defaultPassword, enable180DayFlag, logoFile, logoPreview, validatePassword, fetchSettings]);
 
   // Reset form to original values
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     fetchSettings();
     setLogoFile(null);
     toast.info("Form reset to saved values");
-  };
+  }, [fetchSettings]);
 
   // Get password strength color and text
-  const getPasswordStrengthInfo = (strength: typeof passwordStrength) => {
+  const getPasswordStrengthInfo = useCallback((strength: typeof passwordStrength) => {
     if (strength.isEmpty) return { color: "text-muted-foreground", text: "Enter password", variant: "secondary" as const };
     if (strength.score <= 2) return { color: "text-destructive", text: "Weak", variant: "destructive" as const };
     if (strength.score <= 3) return { color: "text-yellow-600 dark:text-yellow-400", text: "Fair", variant: "secondary" as const };
     if (strength.score <= 4) return { color: "text-blue-600 dark:text-blue-400", text: "Good", variant: "secondary" as const };
     return { color: "text-green-600 dark:text-green-400", text: "Strong", variant: "default" as const };
-  };
+  }, []);
+
+  // Toggle password visibility
+  const togglePasswordVisibility = useCallback(() => {
+    setShowPassword(prev => !prev);
+  }, []);
+
+  // Toggle 180-day flag
+  const toggle180DayFlag = useCallback((checked: boolean) => {
+    setEnable180DayFlag(checked);
+  }, []);
+
+  // Handle file input click
+  const handleFileInputClick = useCallback(() => {
+    document.getElementById('logo-upload')?.click();
+  }, []);
 
   const strengthInfo = getPasswordStrengthInfo(passwordStrength);
 
@@ -484,7 +522,7 @@ const SettingsForm = () => {
                         variant="ghost"
                         size="sm"
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={togglePasswordVisibility}
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -596,7 +634,7 @@ const SettingsForm = () => {
                     </div>
                     <Switch
                       checked={enable180DayFlag}
-                      onCheckedChange={setEnable180DayFlag}
+                      onCheckedChange={toggle180DayFlag}
                       className="data-[state=checked]:bg-primary"
                     />
                   </div>
@@ -674,7 +712,7 @@ const SettingsForm = () => {
                       <Button
                         type="button"
                         variant="outline"
-                        onClick={() => document.getElementById('logo-upload')?.click()}
+                        onClick={handleFileInputClick}
                         className="gap-2"
                       >
                         <Upload className="h-4 w-4" />

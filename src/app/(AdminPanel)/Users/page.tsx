@@ -1,35 +1,27 @@
-
-'use client';
+"use client";
 
 /**
  * Users Management Page
- * 
+ *
  * IMPORTANT: This component follows negation logic for user status:
  * - is_deleted = true means user is INACTIVE
  * - is_deleted = false means user is ACTIVE
- * 
+ *
  * This is reflected in the UI display, switch states, and API calls.
  */
 
-import { useEffect, useState } from 'react';
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { toast } from 'sonner';
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 import {
   useReactTable,
   getCoreRowModel,
   flexRender,
-} from '@tanstack/react-table';
+} from "@tanstack/react-table";
 import {
   Table,
   TableBody,
@@ -37,33 +29,50 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import Image from 'next/image';
-import { 
-  AlertDialog, 
-  AlertDialogContent, 
-  AlertDialogHeader, 
-  AlertDialogFooter, 
-  AlertDialogCancel, 
-  AlertDialogAction, 
-  AlertDialogTitle, 
-  AlertDialogDescription 
-} from '@/components/ui/alert-dialog';
-import { UserTableSkeleton, UserFormSkeleton } from '@/components/UserTableSkeleton';
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import Image from "next/image";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+  AlertDialogTitle,
+  AlertDialogDescription,
+} from "@/components/ui/alert-dialog";
+import {
+  UserTableSkeleton,
+  UserFormSkeleton,
+} from "@/components/UserTableSkeleton";
 
-import axiosInstance from '@/lib/axiosInstance';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { UserPlus, Edit3, Shield, Mail, User as UserIcon, Users, Activity, Calendar, AlertTriangle, CheckCircle, XCircle, TrendingUp, Search } from 'lucide-react';
+import axiosInstance from "@/lib/axiosInstance";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  UserPlus,
+  Edit3,
+  Shield,
+  Mail,
+  User as UserIcon,
+  Users,
+  Activity,
+  Calendar,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  TrendingUp,
+  Search,
+} from "lucide-react";
 
 // 🔹 User type (Fixed property name)
 type User = {
@@ -107,35 +116,35 @@ type Analytics = {
 const userSchema = z.object({
   username: z
     .string()
-    .min(2, 'Username must be at least 2 characters')
-    .max(30, 'Username must not exceed 30 characters')
-    .regex(/^[A-Za-z\s]+$/, 'Only letters and spaces allowed'),
-  email: z.string().email('Invalid email address'),
-  role: z.string().min(1, 'Role is required'),
+    .min(2, "Username must be at least 2 characters")
+    .max(30, "Username must not exceed 30 characters")
+    .regex(/^[A-Za-z\s]+$/, "Only letters and spaces allowed"),
+  email: z.string().email("Invalid email address"),
+  role: z.string().min(1, "Role is required"),
 });
 
 type FormData = z.infer<typeof userSchema>;
 
 // 🔹 ProfilePicture component
-const ProfilePicture = ({ 
-  src, 
-  username, 
-  size = 32, 
-  className = '' 
-}: { 
-  src?: string | null; 
-  username: string; 
-  size?: number; 
-  className?: string; 
+const ProfilePicture = ({
+  src,
+  username,
+  size = 32,
+  className = "",
+}: {
+  src?: string | null;
+  username: string;
+  size?: number;
+  className?: string;
 }) => {
   const [imageError, setImageError] = useState(false);
 
-  const initials = username?.[0]?.toUpperCase() || '?';
+  const initials = username?.[0]?.toUpperCase() || "?";
   const isValidImage = src && /^https?:\/\//.test(src) && !imageError;
 
   if (!isValidImage) {
     return (
-      <div 
+      <div
         className={`flex items-center justify-center rounded-full bg-orange-500 text-white font-semibold transition-all duration-200 hover:scale-105 ${className}`}
         style={{ width: size, height: size, fontSize: size * 0.5 }}
         title={username}
@@ -171,7 +180,7 @@ export default function UsersPage() {
   const [switchOpen, setSwitchOpen] = useState(false);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   const {
     register,
@@ -183,69 +192,92 @@ export default function UsersPage() {
   } = useForm<FormData>({
     resolver: zodResolver(userSchema),
     defaultValues: {
-      username: '',
-      email: '',
-      role: '',
+      username: "",
+      email: "",
+      role: "",
     },
   });
 
-  const watchedRole = watch('role');
+  const watchedRole = watch("role");
 
-  // Filter users based on search term
-  const filteredUsers = users.filter(user => 
-    user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role_name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Memoized filtered users to prevent unnecessary re-renders
+  const filteredUsers = useMemo(() => {
+    if (!searchTerm.trim()) return users;
 
-  const fetchRoles = async () => {
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return users.filter(
+      (user) =>
+        user.username.toLowerCase().includes(lowerSearchTerm) ||
+        user.email.toLowerCase().includes(lowerSearchTerm) ||
+        user.role_name.toLowerCase().includes(lowerSearchTerm)
+    );
+  }, [users, searchTerm]);
+
+  const fetchRoles = useCallback(async () => {
     try {
-      const response = await axiosInstance.get('/api/v1/roles/?is_active=false');
+      const response = await axiosInstance.get(
+        "/api/v1/roles/?is_active=false"
+      );
       setRoles(response.data.data);
     } catch (error) {
-      console.error('Failed to fetch roles:', error);
-      toast.error('Failed to fetch roles');
+      console.error("Failed to fetch roles:", error);
+      toast.error("Failed to fetch roles");
     }
-  };
+  }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setIsInitialLoading(true);
-      const response = await axiosInstance.get('/api/v1/admin/users/');
+      const response = await axiosInstance.get("/api/v1/admin/users/");
       setUsers(response.data.data);
     } catch (error) {
-      console.error('Failed to fetch users:', error);
-      toast.error('Failed to fetch users');
+      console.error("Failed to fetch users:", error);
+      toast.error("Failed to fetch users");
     } finally {
       setIsInitialLoading(false);
     }
-  };
+  }, []);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       setAnalyticsLoading(true);
-      const response = await axiosInstance.get('/api/v1/admin/analytics');
+      const response = await axiosInstance.get("/api/v1/admin/analytics");
       setAnalytics(response.data.data);
     } catch (error) {
-      console.error('Failed to fetch analytics:', error);
-      toast.error('Failed to fetch analytics');
+      console.error("Failed to fetch analytics:", error);
+      toast.error("Failed to fetch analytics");
     } finally {
       setAnalyticsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    let isMounted = true;
+
     const initializeData = async () => {
-      await Promise.all([fetchRoles(), fetchUsers(), fetchAnalytics()]);
+      try {
+        if (isMounted) {
+          await Promise.all([fetchRoles(), fetchUsers(), fetchAnalytics()]);
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error("Failed to initialize data:", error);
+        }
+      }
     };
+
     initializeData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const table = useReactTable({
     data: filteredUsers,
     columns: [
-      { 
-        accessorKey: 'id', 
+      {
+        accessorKey: "id",
         header: () => <div className="text-center font-semibold">ID</div>,
         cell: ({ row }) => (
           <div className="text-center font-mono text-sm">
@@ -254,7 +286,7 @@ export default function UsersPage() {
         ),
       },
       {
-        accessorKey: 'profile_picture',
+        accessorKey: "profile_picture",
         header: () => <div className="font-semibold">Profile Picture</div>,
         cell: ({ row }) => {
           const user = row.original;
@@ -268,23 +300,25 @@ export default function UsersPage() {
               />
             </div>
           );
-        }
+        },
       },
-      { 
-        accessorKey: 'username', 
+      {
+        accessorKey: "username",
         header: () => <div className="font-semibold">User Name</div>,
         cell: ({ row }) => {
           const user = row.original;
           return (
             <div className="flex items-center gap-3">
               {/* Only show the username, not the avatar */}
-              <span className="font-medium text-foreground">{user.username}</span>
+              <span className="font-medium text-foreground">
+                {user.username}
+              </span>
             </div>
           );
         },
       },
-      { 
-        accessorKey: 'email', 
+      {
+        accessorKey: "email",
         header: () => <div className="font-semibold">Email</div>,
         cell: ({ row }) => (
           <div className="flex items-center gap-2">
@@ -292,35 +326,37 @@ export default function UsersPage() {
             <div className="flex flex-col">
               <span className="text-sm font-medium">{row.original.email}</span>
               <span className="text-xs text-muted-foreground">
-                {row.original.email.split('@')[1]}
+                {row.original.email.split("@")[1]}
               </span>
             </div>
           </div>
         ),
       },
-      { 
-        accessorKey: 'role_name', 
+      {
+        accessorKey: "role_name",
         header: () => <div className="font-semibold">Role</div>,
         cell: ({ row }) => {
           const getRoleColor = (role: string) => {
             switch (role.toLowerCase()) {
-              case 'admin':
-                return 'bg-red-500/10 text-red-600 border-red-200';
-              case 'moderator':
-                return 'bg-orange-500/10 text-orange-600 border-orange-200';
-              case 'user':
-                return 'bg-blue-500/10 text-blue-600 border-blue-200';
+              case "admin":
+                return "bg-red-500/10 text-red-600 border-red-200";
+              case "moderator":
+                return "bg-orange-500/10 text-orange-600 border-orange-200";
+              case "user":
+                return "bg-blue-500/10 text-blue-600 border-blue-200";
               default:
-                return 'bg-gray-500/10 text-gray-600 border-gray-200';
+                return "bg-gray-500/10 text-gray-600 border-gray-200";
             }
           };
-          
+
           return (
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-muted-foreground" />
-              <Badge 
-                variant="outline" 
-                className={`text-xs font-medium ${getRoleColor(row.original.role_name)}`}
+              <Badge
+                variant="outline"
+                className={`text-xs font-medium ${getRoleColor(
+                  row.original.role_name
+                )}`}
               >
                 {row.original.role_name}
               </Badge>
@@ -329,13 +365,13 @@ export default function UsersPage() {
         },
       },
       {
-        id: 'switchStatus',
+        id: "switchStatus",
         header: () => <div className="text-center font-semibold">Status</div>,
         cell: ({ row }) => {
           const user = row.original;
           // Negation logic: is_deleted = true means Inactive, is_deleted = false means Active
           const isUserActive = !user.is_deleted;
-          
+
           return (
             <div className="flex items-center justify-center gap-3">
               <Switch
@@ -346,12 +382,12 @@ export default function UsersPage() {
                 }}
                 className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-red-500"
               />
-              <Badge 
+              <Badge
                 variant="outline"
                 className={`text-xs font-medium ${
-                  isUserActive 
-                    ? 'bg-green-500/10 text-green-600 border-green-200' 
-                    : 'bg-red-500/10 text-red-600 border-red-200'
+                  isUserActive
+                    ? "bg-green-500/10 text-green-600 border-green-200"
+                    : "bg-red-500/10 text-red-600 border-red-200"
                 }`}
               >
                 <div className="flex items-center gap-1">
@@ -360,7 +396,7 @@ export default function UsersPage() {
                   ) : (
                     <XCircle className="h-3 w-3" />
                   )}
-                  {isUserActive ? 'Active' : 'Inactive'}
+                  {isUserActive ? "Active" : "Inactive"}
                 </div>
               </Badge>
             </div>
@@ -368,7 +404,7 @@ export default function UsersPage() {
         },
       },
       {
-        id: 'actions',
+        id: "actions",
         header: () => <div className="text-center font-semibold">Actions</div>,
         cell: ({ row }) => (
           <div className="flex justify-center">
@@ -379,9 +415,9 @@ export default function UsersPage() {
               onClick={() => {
                 setEditingUser(row.original);
                 setOpen(true);
-                setValue('username', row.original.username);
-                setValue('email', row.original.email);
-                setValue('role', row.original.role_id);
+                setValue("username", row.original.username);
+                setValue("email", row.original.email);
+                setValue("role", row.original.role_id);
               }}
             >
               <Edit3 className="h-4 w-4" />
@@ -394,83 +430,93 @@ export default function UsersPage() {
     getCoreRowModel: getCoreRowModel(),
   });
 
-const onSubmit = async (data: FormData) => {
-  setLoading(true);
+  const onSubmit = async (data: FormData) => {
+    setLoading(true);
 
-  try {
-    const formData = new FormData();
-    formData.append('username', data.username);
-    formData.append('email', data.email);
-    formData.append('role_id', data.role);
+    try {
+      if (editingUser) {
+        // Update existing user - prepare JSON payload
+        const updatePayload = {
+          new_username: data.username,
+          new_role_id: data.role,
+        };
 
-    if (editingUser) {
-      // Update existing user
-      formData.append('new_username', data.username);
-      formData.append('new_role_id', data.role);
+        try {
+          const userId = editingUser.user_id || editingUser.id;
+          const response = await axiosInstance.put(
+            `/api/v1/admin/users/${userId}`,
+            updatePayload,
+            { headers: { "Content-Type": "application/json" } }
+          );
 
-      try {
-        const userId = editingUser.user_id || editingUser.id;
-        const response = await axiosInstance.put(
-          `/api/v1/admin/users/${userId}`,
-          formData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
-        );
-
-        if (response.data.statusCode === 200) {
-          toast.success('User updated successfully');
-          fetchUsers();
-          fetchAnalytics();
+          if (response.data.statusCode === 200) {
+            toast.success("User updated successfully");
+            fetchUsers();
+            fetchAnalytics();
+          }
+        } catch (error: any) {
+          console.error("Update error:", error);
+          if (error.response) {
+            const { data, status } = error.response;
+            if (status === 400) {
+              toast.error(data?.detail?.message || "Bad request");
+            } else if (status === 409) {
+              toast.error(data?.detail?.message || "User already exists");
+            } else {
+              toast.error(data?.detail?.message || "Update failed");
+            }
+          } else {
+            // Handle network errors or other non-HTTP errors
+            toast.error(error.message || "Network error occurred");
+          }
         }
-      } catch (error: any) {
-        console.error('Update error:', error.response);
-        const { data, status } = error.response || {};
-        if (status === 400) {
-          toast.error(data?.detail?.message || 'Bad request');
-        } else if (status === 409) {
-          toast.error(data?.detail?.message || 'User already exists');
-        } else {
-          toast.error(data?.detail?.message || 'Update failed');
+      } else {
+        // Create new user - prepare JSON payload
+        const createPayload = {
+          username: data.username,
+          email: data.email,
+          role_id: data.role,
+        };
+
+        try {
+          const response = await axiosInstance.post(
+            "/api/v1/admin/register",
+            createPayload,
+            { headers: { "Content-Type": "application/json" } }
+          );
+
+          if (response.data.statusCode === 201) {
+            toast.success("User added successfully");
+            fetchUsers();
+            fetchAnalytics();
+          }
+        } catch (error: any) {
+          console.error("Create error:", error);
+          if (error.response) {
+            const { data, status } = error.response;
+            if (status === 409) {
+              toast.error(data?.detail?.message || "User already exists");
+            } else if (status === 403) {
+              toast.error(data?.detail?.message || "Forbidden");
+            } else {
+              toast.error(data?.detail?.message || "Creation failed");
+            }
+          } else {
+            // Handle network errors or other non-HTTP errors
+            toast.error(error.message || "Network error occurred");
+          }
         }
       }
-    } else {
-      // Create new user
-      try {
-        const response = await axiosInstance.post(
-          '/api/v1/admin/register',
-          formData,
-          { headers: { 'Content-Type': 'multipart/form-data' } }
-        );
-
-        if (response.data.statusCode === 201) {
-          toast.success('User added successfully');
-          fetchUsers();
-          fetchAnalytics();
-        }
-      } catch (error: any) {
-        console.error('Create error:', error.response);
-        const { data, status } = error.response || {};
-        if (status === 409) {
-          toast.error(data?.detail?.message || 'User already exists');
-        } else if (status === 403) {
-          toast.error(data?.detail?.message || 'Forbidden');
-        } else {
-          toast.error(data?.detail?.message || 'Creation failed');
-        }
-      }
+    } catch (error: any) {
+      console.error("General error:", error);
+      toast.error("An unexpected error occurred");
+    } finally {
+      setLoading(false);
+      reset();
+      setOpen(false);
+      setEditingUser(null);
     }
-
-  } catch (error: any) {
-    console.error('General error:', error);
-    toast.error('An unexpected error occurred');
-  } finally {
-    setLoading(false);
-    reset();
-    setOpen(false);
-    setEditingUser(null);
-  }
-};
-
-
+  };
 
   // Show skeleton while loading
   if (isInitialLoading) {
@@ -486,13 +532,15 @@ const onSubmit = async (data: FormData) => {
       {/* Header Section */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Users</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">
+            Users
+          </h2>
           <p className="text-sm text-muted-foreground">
             Manage user accounts and permissions
           </p>
         </div>
 
-        <Button 
+        <Button
           className="flex items-center gap-2 button-hover"
           onClick={() => {
             setEditingUser(null);
@@ -504,147 +552,191 @@ const onSubmit = async (data: FormData) => {
           Add User
         </Button>
 
-        <Dialog
-          open={open}
-          onOpenChange={(state) => {
-            setOpen(state);
-            if (!state) {
-              reset();
-              setEditingUser(null);
-            }
-          }}
-        >
+        {/* Custom Modal Implementation - React 19 Compatible */}
+        {open && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => {
+                setOpen(false);
+                reset();
+                setEditingUser(null);
+              }}
+            />
 
-          <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto custom-scrollbar">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-lg">
-                {editingUser ? (
-                  <>
-                    <Edit3 className="h-5 w-5" />
-                    Edit User
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-5 w-5" />
-                    Add New User
-                  </>
-                )}
-              </DialogTitle>
-            </DialogHeader>
-
-            {loading ? (
-              <UserFormSkeleton />
-            ) : (
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 mt-4 pb-6">
-                {/* Profile Picture Preview */}
-                {editingUser && (
-                  <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-                    <ProfilePicture
-                      src={editingUser.profile_picture}
-                      username={editingUser.username}
-                      size={60}
-                      className="border-2 border-border shadow-sm"
-                    />
-                    <div className="flex flex-col">
-                      <p className="text-sm font-medium">Current Profile</p>
-                      <p className="text-xs text-muted-foreground">
-                        {editingUser.profile_picture ? 'Custom image' : 'Generated from username'}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-sm font-medium flex items-center gap-2">
-                    <UserIcon className="h-4 w-4" />
-                    User Name
-                  </Label>
-                  <Input 
-                    id="username" 
-                    {...register('username')} 
-                    className="form-field-animate form-focus"
-                    placeholder="Enter username"
-                  />
-                  {errors.username && (
-                    <p className="text-destructive text-sm mt-1 flex items-center gap-1">
-                      <span className="inline-block w-1 h-1 bg-destructive rounded-full" />
-                      {errors.username.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    Email
-                  </Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    {...register('email')} 
-                    className="form-field-animate form-focus"
-                    placeholder="Enter email address"
-                  />
-                  {errors.email && (
-                    <p className="text-destructive text-sm mt-1 flex items-center gap-1">
-                      <span className="inline-block w-1 h-1 bg-destructive rounded-full" />
-                      {errors.email.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="role" className="text-sm font-medium flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
-                    Role
-                  </Label>
-                  <Select
-                    onValueChange={(val) => setValue('role', val)}
-                    value={watchedRole}
-                  >
-                    <SelectTrigger className="w-full form-field-animate form-focus">
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles.map((role) => (
-                        <SelectItem key={role.role_id} value={role.role_id}>
-                          <div className="flex items-center gap-2">
-                            <Shield className="h-3 w-3" />
-                            {role.role_name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.role && (
-                    <p className="text-destructive text-sm mt-1 flex items-center gap-1">
-                      <span className="inline-block w-1 h-1 bg-destructive rounded-full" />
-                      {errors.role.message}
-                    </p>
-                  )}
-                </div>
-
-                <Button 
-                  type="submit" 
-                  disabled={loading} 
-                  className="w-full mt-6 button-hover"
-                >
-                  {loading ? (
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
-                      {editingUser ? 'Updating...' : 'Adding...'}
-                    </div>
+            {/* Modal Content */}
+            <div className="relative bg-background border rounded-lg shadow-lg w-full max-w-[425px] max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b">
+                <div className="flex items-center gap-2">
+                  {editingUser ? (
+                    <>
+                      <Edit3 className="h-5 w-5" />
+                      <h2 className="text-lg font-semibold">Edit User</h2>
+                    </>
                   ) : (
-                    <div className="flex items-center gap-2">
-                      {editingUser ? <Edit3 className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-                      {editingUser ? 'Update User' : 'Add User'}
-                    </div>
+                    <>
+                      <UserPlus className="h-5 w-5" />
+                      <h2 className="text-lg font-semibold">Add New User</h2>
+                    </>
                   )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setOpen(false);
+                    reset();
+                    setEditingUser(null);
+                  }}
+                  className="h-8 w-8 p-0"
+                >
+                  <XCircle className="h-4 w-4" />
                 </Button>
-              </form>
-            )}
-          </DialogContent>
-        </Dialog>
+              </div>
+
+              {/* Description */}
+              <div className="px-6 pt-2 pb-4">
+                <p className="text-sm text-muted-foreground">
+                  {editingUser
+                    ? "Update the user information below."
+                    : "Fill in the details to create a new user account."}
+                </p>
+              </div>
+
+              {/* Form Content */}
+              <div className="px-6 pb-6">
+                {loading ? (
+                  <UserFormSkeleton />
+                ) : (
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                    {/* Profile Picture Preview */}
+                    {editingUser && (
+                      <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+                        <ProfilePicture
+                          src={editingUser.profile_picture}
+                          username={editingUser.username}
+                          size={60}
+                          className="border-2 border-border shadow-sm"
+                        />
+                        <div className="flex flex-col">
+                          <p className="text-sm font-medium">Current Profile</p>
+                          <p className="text-xs text-muted-foreground">
+                            {editingUser.profile_picture
+                              ? "Custom image"
+                              : "Generated from username"}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="username"
+                        className="text-sm font-medium flex items-center gap-2"
+                      >
+                        <UserIcon className="h-4 w-4" />
+                        User Name
+                      </Label>
+                      <Input
+                        id="username"
+                        {...register("username")}
+                        className="form-field-animate form-focus"
+                        placeholder="Enter username"
+                      />
+                      {errors.username && (
+                        <p className="text-destructive text-sm mt-1 flex items-center gap-1">
+                          <span className="inline-block w-1 h-1 bg-destructive rounded-full" />
+                          {errors.username.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="email"
+                        className="text-sm font-medium flex items-center gap-2"
+                      >
+                        <Mail className="h-4 w-4" />
+                        Email
+                      </Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        {...register("email")}
+                        className="form-field-animate form-focus"
+                        placeholder="Enter email address"
+                      />
+                      {errors.email && (
+                        <p className="text-destructive text-sm mt-1 flex items-center gap-1">
+                          <span className="inline-block w-1 h-1 bg-destructive rounded-full" />
+                          {errors.email.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="role"
+                        className="text-sm font-medium flex items-center gap-2"
+                      >
+                        <Shield className="h-4 w-4" />
+                        Role
+                      </Label>
+                      <Select
+                        onValueChange={(val) => setValue("role", val)}
+                        value={watchedRole}
+                      >
+                        <SelectTrigger className="w-full form-field-animate form-focus">
+                          <SelectValue placeholder="Select a role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {roles.map((role) => (
+                            <SelectItem key={role.role_id} value={role.role_id}>
+                              <div className="flex items-center gap-2">
+                                <Shield className="h-3 w-3" />
+                                {role.role_name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {errors.role && (
+                        <p className="text-destructive text-sm mt-1 flex items-center gap-1">
+                          <span className="inline-block w-1 h-1 bg-destructive rounded-full" />
+                          {errors.role.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full mt-6 button-hover"
+                    >
+                      {loading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />
+                          {editingUser ? "Updating..." : "Adding..."}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {editingUser ? (
+                            <Edit3 className="h-4 w-4" />
+                          ) : (
+                            <UserPlus className="h-4 w-4" />
+                          )}
+                          {editingUser ? "Update User" : "Add User"}
+                        </div>
+                      )}
+                    </Button>
+                  </form>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Analytics Section */}
@@ -654,11 +746,15 @@ const onSubmit = async (data: FormData) => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Users</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Users
+                </p>
                 {analyticsLoading ? (
                   <div className="w-16 h-8 bg-muted rounded skeleton-shimmer"></div>
                 ) : (
-                  <h3 className="text-2xl font-bold text-foreground">{analytics?.summary.total_users || 0}</h3>
+                  <h3 className="text-2xl font-bold text-foreground">
+                    {analytics?.summary.total_users || 0}
+                  </h3>
                 )}
               </div>
               <div className="p-3 bg-blue-500/10 rounded-full">
@@ -673,11 +769,15 @@ const onSubmit = async (data: FormData) => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Users</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Active Users
+                </p>
                 {analyticsLoading ? (
                   <div className="w-16 h-8 bg-muted rounded skeleton-shimmer"></div>
                 ) : (
-                  <h3 className="text-2xl font-bold text-green-600">{analytics?.summary.active_users || 0}</h3>
+                  <h3 className="text-2xl font-bold text-green-600">
+                    {analytics?.summary.active_users || 0}
+                  </h3>
                 )}
               </div>
               <div className="p-3 bg-green-500/10 rounded-full">
@@ -692,11 +792,15 @@ const onSubmit = async (data: FormData) => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Inactive Users</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Inactive Users
+                </p>
                 {analyticsLoading ? (
                   <div className="w-16 h-8 bg-muted rounded skeleton-shimmer"></div>
                 ) : (
-                  <h3 className="text-2xl font-bold text-orange-600">{analytics?.summary.inactive_users || 0}</h3>
+                  <h3 className="text-2xl font-bold text-orange-600">
+                    {analytics?.summary.inactive_users || 0}
+                  </h3>
                 )}
               </div>
               <div className="p-3 bg-orange-500/10 rounded-full">
@@ -711,11 +815,15 @@ const onSubmit = async (data: FormData) => {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">High Risk</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  High Risk
+                </p>
                 {analyticsLoading ? (
                   <div className="w-16 h-8 bg-muted rounded skeleton-shimmer"></div>
                 ) : (
-                  <h3 className="text-2xl font-bold text-red-600">{analytics?.summary.high_failed_attempts || 0}</h3>
+                  <h3 className="text-2xl font-bold text-red-600">
+                    {analytics?.summary.high_failed_attempts || 0}
+                  </h3>
                 )}
               </div>
               <div className="p-3 bg-red-500/10 rounded-full">
@@ -738,13 +846,18 @@ const onSubmit = async (data: FormData) => {
           {analyticsLoading ? (
             <div className="space-y-4">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                >
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                     <div className="w-24 h-5 bg-muted rounded skeleton-shimmer"></div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="text-sm text-muted-foreground">Registrations:</div>
+                    <div className="text-sm text-muted-foreground">
+                      Registrations:
+                    </div>
                     <div className="w-8 h-6 bg-muted rounded skeleton-shimmer"></div>
                   </div>
                 </div>
@@ -752,16 +865,26 @@ const onSubmit = async (data: FormData) => {
             </div>
           ) : (
             <div className="space-y-4">
-              {analytics?.daily_registrations && analytics.daily_registrations.length > 0 ? (
+              {analytics?.daily_registrations &&
+              analytics.daily_registrations.length > 0 ? (
                 analytics.daily_registrations.slice(-7).map((day, index) => (
-                  <div key={day.date} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors">
+                  <div
+                    key={day.date}
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors"
+                  >
                     <div className="flex items-center gap-3">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{new Date(day.date).toLocaleDateString()}</span>
+                      <span className="text-sm font-medium">
+                        {new Date(day.date).toLocaleDateString()}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="text-sm text-muted-foreground">Registrations:</div>
-                      <Badge variant="outline" className="text-sm">{day.count}</Badge>
+                      <div className="text-sm text-muted-foreground">
+                        Registrations:
+                      </div>
+                      <Badge variant="outline" className="text-sm">
+                        {day.count}
+                      </Badge>
                     </div>
                   </div>
                 ))
@@ -785,7 +908,8 @@ const onSubmit = async (data: FormData) => {
                 <UserIcon className="h-5 w-5" />
                 User Management
                 <Badge variant="secondary" className="ml-2">
-                  {filteredUsers.length} of {users.length} user{users.length !== 1 ? 's' : ''}
+                  {filteredUsers.length} of {users.length} user
+                  {users.length !== 1 ? "s" : ""}
                 </Badge>
               </CardTitle>
               <Button
@@ -801,7 +925,7 @@ const onSubmit = async (data: FormData) => {
                 Refresh
               </Button>
             </div>
-            
+
             {/* Search Input */}
             <div className="relative max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -819,10 +943,16 @@ const onSubmit = async (data: FormData) => {
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((group) => (
-                  <TableRow key={group.id} className="border-border/50 bg-muted/50">
+                  <TableRow
+                    key={group.id}
+                    className="border-border/50 bg-muted/50"
+                  >
                     {group.headers.map((header) => (
                       <TableHead key={header.id} className="px-6 py-4">
-                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                       </TableHead>
                     ))}
                   </TableRow>
@@ -834,19 +964,24 @@ const onSubmit = async (data: FormData) => {
                   table.getRowModel().rows.map((row) => {
                     const isUserActive = !row.original.is_deleted;
                     return (
-                      <TableRow 
-                        key={row.id} 
+                      <TableRow
+                        key={row.id}
                         className={`border-border/50 transition-colors table-hover ${
-                          isUserActive ? 'table-row-active' : 'table-row-inactive'
+                          isUserActive
+                            ? "table-row-active"
+                            : "table-row-inactive"
                         }`}
                       >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="px-6 py-4">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  );
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id} className="px-6 py-4">
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    );
                   })
                 ) : (
                   <TableRow>
@@ -855,11 +990,13 @@ const onSubmit = async (data: FormData) => {
                         {searchTerm ? (
                           <>
                             <Search className="h-8 w-8" />
-                            <p>No users found matching &quot;{searchTerm}&quot;</p>
+                            <p>
+                              No users found matching &quot;{searchTerm}&quot;
+                            </p>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setSearchTerm('')}
+                              onClick={() => setSearchTerm("")}
                               className="mt-2"
                             >
                               Clear search
@@ -889,14 +1026,17 @@ const onSubmit = async (data: FormData) => {
               Change User Status
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
-              Are you sure you want to{' '}
+              Are you sure you want to{" "}
               <span className="font-semibold text-foreground">
-                {selectedUser?.is_deleted ? 'activate' : 'deactivate'}
-              </span>{' '}
-              this user? This will {selectedUser?.is_deleted ? 'allow' : 'prevent'} them from accessing the system.
+                {selectedUser?.is_deleted ? "activate" : "deactivate"}
+              </span>{" "}
+              this user? This will{" "}
+              {selectedUser?.is_deleted ? "allow" : "prevent"} them from
+              accessing the system.
               <br />
               <span className="text-xs text-muted-foreground mt-2 block">
-                Current status: {selectedUser?.is_deleted ? 'Inactive' : 'Active'}
+                Current status:{" "}
+                {selectedUser?.is_deleted ? "Inactive" : "Active"}
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -921,13 +1061,15 @@ const onSubmit = async (data: FormData) => {
                 try {
                   await axiosInstance.patch(endpoint);
                   toast.success(
-                    `User ${selectedUser.is_deleted ? 'activated' : 'deactivated'} successfully`
+                    `User ${
+                      selectedUser.is_deleted ? "activated" : "deactivated"
+                    } successfully`
                   );
                   fetchUsers();
                   fetchAnalytics();
                 } catch (error: any) {
-                  console.error('Status update error:', error);
-                  toast.error('Failed to update status');
+                  console.error("Status update error:", error);
+                  toast.error("Failed to update status");
                 } finally {
                   setSwitchOpen(false);
                   setSelectedUser(null);
@@ -940,8 +1082,6 @@ const onSubmit = async (data: FormData) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-
     </div>
   );
 }

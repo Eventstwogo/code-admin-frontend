@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,9 +21,18 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
   const router = useRouter();
+  const isMountedRef = useRef(true);
+
+  // Cleanup function to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const passwordRequirements = [
     { label: "At least 8 characters", met: newPassword.length >= 8 },
@@ -44,7 +53,7 @@ export default function ResetPasswordPage() {
     return score;
   }, [newPassword]);
 
-  const validatePassword = (password: string): string | null => {
+  const validatePassword = useCallback((password: string): string | null => {
     if (password.length < 8) return "Password must be at least 8 characters.";
     if (!/[A-Z]/.test(password)) return "Password must include at least one uppercase letter.";
     if (!/[a-z]/.test(password)) return "Password must include at least one lowercase letter.";
@@ -52,9 +61,11 @@ export default function ResetPasswordPage() {
     if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?]/.test(password))
       return "Password must include at least one special character.";
     return null;
-  };
+  }, []);
 
-  const handleReset = async () => {
+  const handleReset = useCallback(async () => {
+    if (isLoading) return; // Prevent multiple simultaneous requests
+    
     const passwordError = validatePassword(newPassword);
     if (passwordError) {
       setError(passwordError);
@@ -64,20 +75,42 @@ export default function ResetPasswordPage() {
       setError("Passwords do not match.");
       return;
     }
+    
     setError("");
+    setIsLoading(true);
+    
     try {
       const response = await axiosInstance.patch('/api/v1/admin/reset-password', {
         email: email,
         new_password: newPassword
       });
+      
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) return;
+      
       if (response.data.statusCode === 200) {
         toast.success('Password reset successfully');
         router.push('/');
       }
     } catch (error) {
+      // Check if component is still mounted before showing error
+      if (!isMountedRef.current) return;
       toast.error('Failed to reset the password');
+    } finally {
+      // Check if component is still mounted before updating loading state
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [newPassword, confirmPassword, email, validatePassword, router, isLoading]);
+
+  const toggleNewPasswordVisibility = useCallback(() => {
+    setShowNewPassword(prev => !prev);
+  }, []);
+
+  const toggleConfirmPasswordVisibility = useCallback(() => {
+    setShowConfirmPassword(prev => !prev);
+  }, []);
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
@@ -120,7 +153,7 @@ export default function ResetPasswordPage() {
             <button
               type="button"
               className="absolute right-3 top-8 text-indigo-400 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400"
-              onClick={() => setShowNewPassword((prev) => !prev)}
+              onClick={toggleNewPasswordVisibility}
             >
               {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
@@ -166,7 +199,7 @@ export default function ResetPasswordPage() {
             <button
               type="button"
               className="absolute right-3 top-8 text-indigo-400 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400"
-              onClick={() => setShowConfirmPassword((prev) => !prev)}
+              onClick={toggleConfirmPasswordVisibility}
             >
               {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
@@ -182,8 +215,12 @@ export default function ResetPasswordPage() {
             </motion.p>
           )}
           {/* Submit */}
-          <Button onClick={handleReset} className="w-full text-base bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-full shadow-lg font-semibold transition-all duration-200">
-            Reset Password
+          <Button 
+            onClick={handleReset} 
+            disabled={isLoading || !allMet}
+            className="w-full text-base bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-full shadow-lg font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? "Resetting..." : "Reset Password"}
           </Button>
         </div>
       </motion.div>

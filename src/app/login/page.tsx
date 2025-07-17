@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -31,8 +31,17 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { login } = useStore();
+  const isMountedRef = useRef(true);
+
+  // Cleanup function to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   const {
     register,
     handleSubmit,
@@ -41,7 +50,11 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: z.infer<typeof loginSchema>) => {
+  const onSubmit = useCallback(async (data: z.infer<typeof loginSchema>) => {
+    if (isSubmitting) return; // Prevent multiple simultaneous requests
+    
+    setIsSubmitting(true);
+    
     try {
       // Create form data for OAuth2-style request
       const formData = new URLSearchParams();
@@ -58,6 +71,9 @@ export default function LoginPage() {
         },
       });
   
+      // Check if component is still mounted before proceeding
+      if (!isMountedRef.current) return;
+      
       console.log('Login response:', response.data);
       const statusCode = response.data.statusCode;
       const userId = response.data.user_id;
@@ -77,6 +93,9 @@ export default function LoginPage() {
         toast.success('Login Success. Please reset your password.');
       }
     } catch (error: unknown) {
+      // Check if component is still mounted before showing error
+      if (!isMountedRef.current) return;
+      
       console.log('Login error:', error);
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response: { status: number; data: any } };
@@ -96,8 +115,17 @@ export default function LoginPage() {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error.';
         toast.error('An error occurred: ' + errorMessage);
       }
+    } finally {
+      // Check if component is still mounted before updating loading state
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
-  };
+  }, [login, router, isSubmitting]);
+
+  const togglePasswordVisibility = useCallback(() => {
+    setShowPassword(prev => !prev);
+  }, []);
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
@@ -149,6 +177,7 @@ export default function LoginPage() {
                 id="email"
                 type="email"
                 {...register("email")}
+                disabled={isSubmitting}
                 className="pl-10 focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600 transition-all"
               />
               <User className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 dark:text-indigo-300" />
@@ -167,12 +196,13 @@ export default function LoginPage() {
                 id="password"
                 type={showPassword ? "text" : "password"}
                 {...register("password")}
+                disabled={isSubmitting}
                 className="pl-10 pr-10 focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600 transition-all"
               />
               <Lock className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 dark:text-indigo-300" />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={togglePasswordVisibility}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-400 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 tabIndex={-1}
               >
@@ -190,9 +220,10 @@ export default function LoginPage() {
           {/* Submit Button */}
           <Button
             type="submit"
-            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-full shadow-lg text-lg font-semibold py-2 transition-all duration-200 flex items-center justify-center gap-2"
+            disabled={isSubmitting}
+            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-full shadow-lg text-lg font-semibold py-2 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>Login</span>
+            <span>{isSubmitting ? "Logging in..." : "Login"}</span>
             <Lock className="h-5 w-5" />
           </Button>
           <div className="mt-4 text-center">

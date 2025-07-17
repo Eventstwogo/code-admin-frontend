@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 interface DashboardStats {
   categories: number;
@@ -24,39 +24,56 @@ export const useDashboardStats = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Ref to track mounted state for cleanup
+  const isMountedRef = useRef(true);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Mock data - replace with actual API call
-        const mockStats: DashboardStats = {
-          categories: 12,
-          users: 1234,
-          revenue: "$45,678",
-          events: 28,
-          tickets: 5432,
-          activeUsers: 89,
-        };
-        
+  // Memoized fetch function to prevent unnecessary re-renders
+  const fetchStats = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock data - replace with actual API call
+      const mockStats: DashboardStats = {
+        categories: 12,
+        users: 1234,
+        revenue: "$45,678",
+        events: 28,
+        tickets: 5432,
+        activeUsers: 89,
+      };
+      
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
         setStats(mockStats);
         setError(null);
-      } catch (err) {
+      }
+    } catch (err) {
+      if (isMountedRef.current) {
         setError("Failed to fetch dashboard statistics");
         console.error("Dashboard stats error:", err);
-      } finally {
+      }
+    } finally {
+      if (isMountedRef.current) {
         setIsLoading(false);
       }
-    };
-
-    fetchStats();
+    }
   }, []);
 
-  const getFormattedStats = (): StatsItem[] => {
+  useEffect(() => {
+    fetchStats();
+    
+    // Cleanup function to prevent memory leaks
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, [fetchStats]);
+
+  // Memoize formatted stats to prevent unnecessary recalculations
+  const formattedStats = useMemo((): StatsItem[] => {
     if (!stats) return [];
 
     return [
@@ -89,45 +106,56 @@ export const useDashboardStats = () => {
         percentage: "+21.7%"
       }
     ];
-  };
+  }, [stats]);
+
+  // Memoized refetch function to prevent unnecessary re-renders
+  const refetch = useCallback(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   return {
     stats,
-    formattedStats: getFormattedStats(),
+    formattedStats,
     isLoading,
     error,
-    refetch: () => {
-      setIsLoading(true);
-      // Trigger refetch logic here
-    }
+    refetch
   };
 };
 
 // Hook for theme-aware animations
 export const useThemeAnimations = () => {
   const [mounted, setMounted] = useState(false);
+  
+  // Ref to track mounted state for cleanup
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
     setMounted(true);
+    
+    // Cleanup function to prevent memory leaks
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
-  const getCardHoverClass = (baseGradient: string) => {
+  // Memoize animation class functions to prevent unnecessary re-renders
+  const getCardHoverClass = useCallback((baseGradient: string) => {
     if (!mounted) return "";
     
     return `hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-300 hover:scale-[1.02]`;
-  };
+  }, [mounted]);
 
-  const getIconAnimationClass = () => {
+  const getIconAnimationClass = useCallback(() => {
     if (!mounted) return "";
     
     return "group-hover:scale-110 transition-transform duration-300";
-  };
+  }, [mounted]);
 
-  const getButtonAnimationClass = () => {
+  const getButtonAnimationClass = useCallback(() => {
     if (!mounted) return "";
     
     return "group-hover/btn:translate-x-1 transition-transform duration-200";
-  };
+  }, [mounted]);
 
   return {
     mounted,

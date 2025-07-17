@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -58,20 +58,31 @@ export default function ProfilePage() {
   
   const userId = useStore(state => state.userId);
 
-  const fetchUserDetails = async (userId: string) => {
+  const fetchUserDetails = useCallback(async (userId: string) => {
+    const abortController = new AbortController();
+    
     try {
       setLoading(true);
       setError(null);
-      const response = await axiosInstance.get(`/api/v1/admin/users/${userId}`);
+      const response = await axiosInstance.get(`/api/v1/admin/users/${userId}`, {
+        signal: abortController.signal
+      });
       setUser(response.data.data);
     } catch (error: any) {
+      if (error.name === 'AbortError') {
+        return; // Request was cancelled, don't show error
+      }
       const errorMessage = error?.response?.data?.message || 'Failed to fetch user data';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+
+    return () => {
+      abortController.abort();
+    };
+  }, []);
 
   useEffect(() => {
     if (!userId) {
@@ -81,9 +92,19 @@ export default function ProfilePage() {
     }
 
     fetchUserDetails(userId);
-  }, [userId]);
+  }, [userId, fetchUserDetails]);
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Cleanup effect for memory leaks
+  useEffect(() => {
+    return () => {
+      // Clean up any remaining preview URLs when component unmounts
+      if (avatarPreview) {
+        URL.revokeObjectURL(avatarPreview);
+      }
+    };
+  }, [avatarPreview]);
+
+  const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -109,22 +130,22 @@ export default function ProfilePage() {
     setAvatarPreview(previewUrl);
     setSelectedFile(file);
     setShowActions(true);
-  };
+  }, [avatarPreview]);
 
-  const triggerFileInput = () => {
+  const triggerFileInput = useCallback(() => {
     fileInputRef.current?.click();
-  };
+  }, []);
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     if (avatarPreview) {
       URL.revokeObjectURL(avatarPreview);
     }
     setAvatarPreview(null);
     setSelectedFile(null);
     setShowActions(false);
-  };
+  }, [avatarPreview]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!selectedFile || !userId) return;
 
     setUploadLoading(true);
@@ -132,9 +153,12 @@ export default function ProfilePage() {
     formData.append('user_id', userId);
     formData.append("profile_picture", selectedFile);
 
+    const abortController = new AbortController();
+
     try {
       const response = await axiosInstance.patch(`/api/v1/admin/profile/picture`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        signal: abortController.signal
       });
 
       if (response.data.statusCode === 200) {
@@ -159,15 +183,22 @@ export default function ProfilePage() {
         toast.error("Failed to update image.");
       }
     } catch (error: any) {
+      if (error.name === 'AbortError') {
+        return; // Request was cancelled
+      }
       const errorMessage = error?.response?.data?.message || "Error uploading image.";
       toast.error(errorMessage);
     } finally {
       setUploadLoading(false);
     }
-  };
+
+    return () => {
+      abortController.abort();
+    };
+  }, [selectedFile, userId, user, avatarPreview]);
 
   // Password strength validation
-  const getPasswordStrength = (password: string) => {
+  const getPasswordStrength = useCallback((password: string) => {
     let score = 0;
     const checks = {
       length: password.length >= 8,
@@ -182,22 +213,22 @@ export default function ProfilePage() {
     });
 
     return { score, checks };
-  };
+  }, []);
 
   const passwordStrength = getPasswordStrength(newPassword);
   
-  const getStrengthLabel = (score: number) => {
+  const getStrengthLabel = useCallback((score: number) => {
     if (score === 0) return { label: "", color: "" };
     if (score <= 2) return { label: "Weak", color: "text-destructive" };
     if (score <= 3) return { label: "Fair", color: "text-yellow-500" };
     if (score <= 4) return { label: "Good", color: "text-blue-500" };
     return { label: "Strong", color: "text-green-500" };
-  };
+  }, []);
 
   const strengthInfo = getStrengthLabel(passwordStrength.score);
 
   // Change Password Handler
-  const handleChangePassword = async () => {
+  const handleChangePassword = useCallback(async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast.error("Please fill in all password fields");
       return;
@@ -225,6 +256,8 @@ export default function ProfilePage() {
 
     setPasswordLoading(true);
 
+    const abortController = new AbortController();
+
     try {
       const formData = new URLSearchParams();
       formData.append('current_password', currentPassword);
@@ -234,6 +267,7 @@ export default function ProfilePage() {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
+        signal: abortController.signal
       });
 
       if (response.data.statusCode === 200) {
@@ -246,21 +280,59 @@ export default function ProfilePage() {
         toast.error(response.data.message || "Failed to change password");
       }
     } catch (error: any) {
+      if (error.name === 'AbortError') {
+        return; // Request was cancelled
+      }
       const errorMessage = error?.response?.data?.message || "Error changing password";
       toast.error(errorMessage);
     } finally {
       setPasswordLoading(false);
     }
-  };
 
-  const resetPasswordForm = () => {
+    return () => {
+      abortController.abort();
+    };
+  }, [currentPassword, newPassword, confirmPassword, passwordStrength.score]);
+
+  const resetPasswordForm = useCallback(() => {
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
     setShowCurrentPassword(false);
     setShowNewPassword(false);
     setShowConfirmPassword(false);
-  };
+  }, []);
+
+  // Password visibility toggle handlers
+  const toggleCurrentPasswordVisibility = useCallback(() => {
+    setShowCurrentPassword(!showCurrentPassword);
+  }, [showCurrentPassword]);
+
+  const toggleNewPasswordVisibility = useCallback(() => {
+    setShowNewPassword(!showNewPassword);
+  }, [showNewPassword]);
+
+  const toggleConfirmPasswordVisibility = useCallback(() => {
+    setShowConfirmPassword(!showConfirmPassword);
+  }, [showConfirmPassword]);
+
+  // Dialog handlers
+  const handlePasswordDialogOpen = useCallback(() => {
+    resetPasswordForm();
+    setIsPasswordDialogOpen(true);
+  }, [resetPasswordForm]);
+
+  const handlePasswordDialogClose = useCallback(() => {
+    setIsPasswordDialogOpen(false);
+    resetPasswordForm();
+  }, [resetPasswordForm]);
+
+  // Retry handler for error state
+  const handleRetry = useCallback(() => {
+    if (userId) {
+      fetchUserDetails(userId);
+    }
+  }, [userId, fetchUserDetails]);
 
   // Enhanced Loading skeleton
   if (loading) {
@@ -357,14 +429,14 @@ export default function ProfilePage() {
     );
   }
 
-  const getUserInitials = (name: string) => {
+  const getUserInitials = useCallback((name: string) => {
     return name
       .split(' ')
       .map(word => word.charAt(0))
       .join('')
       .toUpperCase()
       .slice(0, 2);
-  };
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-8">
@@ -533,10 +605,7 @@ export default function ProfilePage() {
                     variant="outline" 
                     size="sm" 
                     className="gap-2"
-                    onClick={() => {
-                      resetPasswordForm();
-                      setIsPasswordDialogOpen(true);
-                    }}
+                    onClick={handlePasswordDialogOpen}
                   >
                     <Lock className="h-4 w-4" />
                     Change Password
@@ -574,7 +643,7 @@ export default function ProfilePage() {
                           variant="ghost"
                           size="sm"
                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          onClick={toggleCurrentPasswordVisibility}
                           disabled={passwordLoading}
                         >
                           {showCurrentPassword ? (
@@ -606,7 +675,7 @@ export default function ProfilePage() {
                           variant="ghost"
                           size="sm"
                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          onClick={toggleNewPasswordVisibility}
                           disabled={passwordLoading}
                         >
                           {showNewPassword ? (
@@ -734,7 +803,7 @@ export default function ProfilePage() {
                           variant="ghost"
                           size="sm"
                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          onClick={toggleConfirmPasswordVisibility}
                           disabled={passwordLoading}
                         >
                           {showConfirmPassword ? (
@@ -762,10 +831,7 @@ export default function ProfilePage() {
                   <DialogFooter className="flex gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => {
-                        setIsPasswordDialogOpen(false);
-                        resetPasswordForm();
-                      }}
+                      onClick={handlePasswordDialogClose}
                       disabled={passwordLoading}
                     >
                       Cancel

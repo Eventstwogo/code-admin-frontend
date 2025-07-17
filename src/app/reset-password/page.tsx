@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,14 @@ export default function ResetPasswordWithTokenPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const isMountedRef = useRef(true);
+
+  // Cleanup function to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const {
     register,
@@ -77,7 +85,9 @@ export default function ResetPasswordWithTokenPage() {
     return score;
   }, [password]);
 
-  const onSubmit = async (data: z.infer<typeof resetPasswordSchema>) => {
+  const onSubmit = useCallback(async (data: z.infer<typeof resetPasswordSchema>) => {
+    if (submitting) return; // Prevent multiple simultaneous requests
+    
     setSubmitting(true);
     try {
       await axiosInstance.post(
@@ -91,14 +101,32 @@ export default function ResetPasswordWithTokenPage() {
           headers: { "Content-Type": "application/x-www-form-urlencoded" },
         }
       );
+      
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) return;
+      
       toast.success("Password reset successful. Please login.");
       router.push("/");
     } catch (error: any) {
+      // Check if component is still mounted before showing error
+      if (!isMountedRef.current) return;
+      
       toast.error(error?.response?.data?.message || "Failed to reset password.");
     } finally {
-      setSubmitting(false);
+      // Check if component is still mounted before updating loading state
+      if (isMountedRef.current) {
+        setSubmitting(false);
+      }
     }
-  };
+  }, [email, token, router, submitting]);
+
+  const toggleNewPasswordVisibility = useCallback(() => {
+    setShowNewPassword(prev => !prev);
+  }, []);
+
+  const toggleConfirmPasswordVisibility = useCallback(() => {
+    setShowConfirmPassword(prev => !prev);
+  }, []);
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden">
@@ -128,7 +156,7 @@ export default function ResetPasswordWithTokenPage() {
             <svg className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 dark:text-indigo-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0-1.104.896-2 2-2s2 .896 2 2v1h-4v-1zm-2 4h8v2a2 2 0 01-2 2H8a2 2 0 01-2-2v-2h4zm0-4V9a4 4 0 118 0v2" /></svg>
             <button
               type="button"
-              onClick={() => setShowNewPassword((v) => !v)}
+              onClick={toggleNewPasswordVisibility}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-400 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               tabIndex={-1}
             >
@@ -179,7 +207,7 @@ export default function ResetPasswordWithTokenPage() {
             <svg className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 dark:text-indigo-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
             <button
               type="button"
-              onClick={() => setShowConfirmPassword((v) => !v)}
+              onClick={toggleConfirmPasswordVisibility}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-400 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               tabIndex={-1}
             >
@@ -197,7 +225,11 @@ export default function ResetPasswordWithTokenPage() {
             <p className="text-red-500 text-sm mt-1">{errors.confirm_password.message}</p>
           )}
         </div>
-        <Button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-full shadow-lg text-lg font-semibold py-2 transition-all duration-200 flex items-center justify-center gap-2" disabled={submitting}>
+        <Button 
+          type="submit" 
+          className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-full shadow-lg text-lg font-semibold py-2 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" 
+          disabled={submitting || !allMet || !passwordsMatch}
+        >
           {submitting ? "Resetting..." : "Reset Password"}
           <svg className="h-5 w-5 ml-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
         </Button>

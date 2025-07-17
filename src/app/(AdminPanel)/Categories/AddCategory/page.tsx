@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import slugify from "slugify";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
@@ -83,6 +83,14 @@ const CategoryCreation = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const isMountedRef = useRef(true);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const {
     register,
@@ -117,7 +125,9 @@ const CategoryCreation = () => {
     }
   }, [name, nameTouched, setValue]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isMountedRef.current) return;
+    
     const file = e.target.files?.[0];
     if (file) {
       // Validate file type
@@ -134,20 +144,28 @@ const CategoryCreation = () => {
       
       setSelectedImageFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.onloadend = () => {
+        if (isMountedRef.current) {
+          setImagePreview(reader.result as string);
+        }
+      };
       reader.readAsDataURL(file);
     }
-  };
+  }, []);
 
-  const handleImageRemove = () => {
+  const handleImageRemove = useCallback(() => {
+    if (!isMountedRef.current) return;
+    
     setImagePreview(null);
     setSelectedImageFile(null);
     // Reset file input
     const fileInput = document.getElementById('image-upload') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
-  };
+  }, []);
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    if (!isMountedRef.current) return;
+    
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
@@ -155,9 +173,11 @@ const CategoryCreation = () => {
     } else if (e.type === "dragleave") {
       setDragActive(false);
     }
-  };
+  }, []);
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    if (!isMountedRef.current) return;
+    
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -177,55 +197,73 @@ const CategoryCreation = () => {
       
       setSelectedImageFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.onloadend = () => {
+        if (isMountedRef.current) {
+          setImagePreview(reader.result as string);
+        }
+      };
       reader.readAsDataURL(file);
     }
-  };
+  }, []);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     router.push("/Categories");
-  };
+  }, [router]);
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    
     try {
       const response = await axiosInstance.get("/api/v1/categories/?status_filter=false");
-      setCategories(response.data.data);
+      if (isMountedRef.current) {
+        setCategories(response.data.data);
+      }
     } catch (error) {
       console.error("Failed to fetch categories:", error);
-      toast.error("Failed to load categories");
+      if (isMountedRef.current) {
+        toast.error("Failed to load categories");
+      }
     }
-  };
+  }, []);
 
-  const fetchCategory = async (id: string) => {
+  const fetchCategory = useCallback(async (id: string) => {
+    if (!isMountedRef.current) return;
+    
     try {
       const response = await axiosInstance.get(`api/v1/category-items/${id}`);
       const category = response.data.data;
 
-      setValue("name", category.category_name || category.subcategory_name || "");
-      setValue("slug", category.category_slug || category.subcategory_slug || "");
-      setValue("description", category.category_description || category.subcategory_description || "");
-      setValue("metaTitle", category.category_meta_title || category.subcategory_meta_titl || "");
-      setValue("metaDescription", category.category_meta_description || category.subcategory_meta_description || "");
-      setValue("parent", category.category_id || "none");
-      setValue("features", {
-        featured: category.featured_category || category.featured_subcategory,
-        homepage: category.show_in_menu,
-        promotions: false,
-      });
+      if (isMountedRef.current) {
+        setValue("name", category.category_name || category.subcategory_name || "");
+        setValue("slug", category.category_slug || category.subcategory_slug || "");
+        setValue("description", category.category_description || category.subcategory_description || "");
+        setValue("metaTitle", category.category_meta_title || category.subcategory_meta_titl || "");
+        setValue("metaDescription", category.category_meta_description || category.subcategory_meta_description || "");
+        setValue("parent", category.category_id || "none");
+        setValue("features", {
+          featured: category.featured_category || category.featured_subcategory,
+          homepage: category.show_in_menu,
+          promotions: false,
+        });
 
-      setNameTouched(false);
+        setNameTouched(false);
 
-      if (category.category_img_thumbnail || category.subcategory_img_thumbnail) {
-        setImagePreview(`${category.category_img_thumbnail || category.subcategory_img_thumbnail}`);
+        if (category.category_img_thumbnail || category.subcategory_img_thumbnail) {
+          setImagePreview(`${category.category_img_thumbnail || category.subcategory_img_thumbnail}`);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch category:", error);
-      toast.error("Failed to load category details");
+      if (isMountedRef.current) {
+        toast.error("Failed to load category details");
+      }
     }
-  };
+  }, [setValue]);
 
   useEffect(() => {
     const loadData = async () => {
+      if (!isMountedRef.current) return;
+      
       setIsLoading(true);
       try {
         await fetchCategories();
@@ -233,15 +271,23 @@ const CategoryCreation = () => {
           await fetchCategory(categoryId);
         }
       } finally {
-        setIsLoading(false);
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
       }
     };
     
     loadData();
-  }, [categoryId]);
+  }, [categoryId, fetchCategories, fetchCategory]);
 
-  const onSubmit = async (data: CategoryFormData) => {
-    if (isSubmitting) return;
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isMountedRef.current) return;
+    setValue("name", e.target.value);
+    setNameTouched(true);
+  }, [setValue]);
+
+  const onSubmit = useCallback(async (data: CategoryFormData) => {
+    if (isSubmitting || !isMountedRef.current) return;
     
     setIsSubmitting(true);
     try {
@@ -270,31 +316,38 @@ const CategoryCreation = () => {
       });
 
       if (response.data.statusCode === 200 || response.data.statusCode === 201) {
-        toast.success(response.data.message || `Category ${categoryId ? 'updated' : 'created'} successfully!`);
-        router.push("/Categories");
+        if (isMountedRef.current) {
+          toast.success(response.data.message || `Category ${categoryId ? 'updated' : 'created'} successfully!`);
+          router.push("/Categories");
+        }
       }
     } catch (error: any) {
       const message =
         error?.response?.data?.detail?.message || 
         error?.response?.data?.message ||
         `Failed to ${categoryId ? 'update' : 'create'} category.`;
-      toast.error(message);
+      
+      if (isMountedRef.current) {
+        toast.error(message);
+      }
       console.error("Error saving category:", error);
     } finally {
-      setIsSubmitting(false);
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
-  };
+  }, [isSubmitting, selectedImageFile, categoryId, router]);
 
   if (isLoading) {
     return <CategoryFormSkeleton />;
   }
 
   // Define feature options as a tuple with explicit name values
-  const featureOptions = [
+  const featureOptions = React.useMemo(() => [
     { name: 'features.featured' as const, key: 'featured', label: 'Featured Category', description: 'Show in featured section' },
     { name: 'features.homepage' as const, key: 'homepage', label: 'Show in Menu', description: 'Display in main navigation' },
     { name: 'features.promotions' as const, key: 'promotions', label: 'Promotions', description: 'Enable for promotional content' }
-  ] as const;
+  ] as const, []);
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-200 custom-scrollbar">
@@ -438,10 +491,7 @@ const CategoryCreation = () => {
                     "form-field-animate",
                     errors.name && "border-destructive focus:border-destructive"
                   )}
-                  onChange={(e) => {
-                    setValue("name", e.target.value);
-                    setNameTouched(true);
-                  }}
+                  onChange={handleNameChange}
                 />
                 {errors.name && (
                   <div className="flex items-center gap-2 text-destructive text-sm">

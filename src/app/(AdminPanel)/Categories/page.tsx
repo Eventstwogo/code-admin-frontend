@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -46,11 +46,31 @@ import Image from 'next/image';
 import useSWR from 'swr';
 
 // Image component with fallback
-const CategoryImage = ({ src, alt, name }: { src?: string; alt: string; name: string }) => {
+const CategoryImage = React.memo(({ src, alt, name }: { src?: string; alt: string; name: string }) => {
   const [imageError, setImageError] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const firstLetter = name.charAt(0).toUpperCase();
+
+  const handleLoadingComplete = useCallback(() => {
+    if (isMountedRef.current) {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const handleError = useCallback(() => {
+    if (isMountedRef.current) {
+      setImageError(true);
+      setIsLoading(false);
+    }
+  }, []);
 
   if (!src || imageError) {
     return (
@@ -77,15 +97,14 @@ const CategoryImage = ({ src, alt, name }: { src?: string; alt: string; name: st
         width={40}
         height={40}
         className={`w-10 h-10 rounded-lg object-cover shadow-sm border border-border transition-opacity ${isLoading ? 'opacity-0' : 'opacity-100'}`}
-        onLoadingComplete={() => setIsLoading(false)}
-        onError={() => {
-          setImageError(true);
-          setIsLoading(false);
-        }}
+        onLoadingComplete={handleLoadingComplete}
+        onError={handleError}
       />
     </div>
   );
-};
+});
+
+CategoryImage.displayName = 'CategoryImage';
 
 // Skeleton component for table rows
 const TableRowSkeleton = () => (
@@ -119,8 +138,13 @@ const TableRowSkeleton = () => (
 
 // SWR fetcher for categories
 const fetchCategories = async () => {
-  const response = await axiosInstance('/api/v1/categories/list');
-  return response.data.data || [];
+  try {
+    const response = await axiosInstance('/api/v1/categories/list');
+    return response.data.data || [];
+  } catch (error) {
+    console.error('Failed to fetch categories:', error);
+    throw error;
+  }
 };
 
 function useCategoriesSWR() {
@@ -145,47 +169,70 @@ const CategoriesTable = () => {
   // const [isLoading, setIsLoading] = React.useState(true);
   // const [error, setError] = React.useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const isMountedRef = useRef(true);
 
   const router = useRouter();
   const { categories, error, isLoading, mutate } = useCategoriesSWR();
 
-  const refreshCategories = async () => {
-    setIsRefreshing(true);
-    await mutate();
-    setIsRefreshing(false);
-  };
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
-  const toggleRow = (id: string) => {
+  const refreshCategories = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    setIsRefreshing(true);
+    try {
+      await mutate();
+    } finally {
+      if (isMountedRef.current) {
+        setIsRefreshing(false);
+      }
+    }
+  }, [mutate]);
+
+  const toggleRow = useCallback((id: string) => {
+    if (!isMountedRef.current) return;
     setExpandedRows(prev => ({
       ...prev,
       [id]: !prev[id],
     }));
-  };
+  }, []);
 
 
-const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') => {
-  const endpoint =
-    status === 'active'
-      ? `/api/v1/category-items/${id}/restore`       // PATCH for restore
-      : `/api/v1/category-items/${id}/soft`;  // DELETE for soft delete
+  const updateCategoryStatus = useCallback(async (id: string, status: 'active' | 'inactive') => {
+    if (!isMountedRef.current) return;
+    
+    const endpoint =
+      status === 'active'
+        ? `/api/v1/category-items/${id}/restore`       // PATCH for restore
+        : `/api/v1/category-items/${id}/soft`;  // DELETE for soft delete
 
-  try {
-    if (status === 'active') {
-      await axiosInstance.put(endpoint); // Restore → PATCH
-    } else {
-      await axiosInstance.delete(endpoint); // Soft delete → DELETE
+    try {
+      if (status === 'active') {
+        await axiosInstance.put(endpoint); // Restore → PATCH
+      } else {
+        await axiosInstance.delete(endpoint); // Soft delete → DELETE
+      }
+
+      if (isMountedRef.current) {
+        toast.success(`Category ${status === 'active' ? 'activated' : 'deactivated'} successfully`);
+        await mutate();
+      }
+    } catch (error) {
+      if (isMountedRef.current) {
+        toast.error('Failed to update status');
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setSwitchOpen(false);
+        setSelectedRow(null);
+        setDesiredStatus(null);
+      }
     }
-
-    toast.success(`Category ${status === 'active' ? 'activated' : 'deactivated'} successfully`);
-    await mutate();
-  } catch (error) {
-    toast.error('Failed to update status');
-  } finally {
-    setSwitchOpen(false);
-    setSelectedRow(null);
-    setDesiredStatus(null);
-  }
-};
+  }, [mutate]);
 
   const normalizedData = React.useMemo(() => {
     return categories.map((cat: { category_id: any; category_name: any; category_slug: any; category_description: any; category_img_thumbnail: any; category_status: any; subcategories: any; }) => ({
@@ -219,6 +266,47 @@ const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') =
     }
     return flatData;
   }, [normalizedData, expandedRows]);
+
+  const handleSwitchChange = useCallback((row: any, checked: boolean) => {
+    if (!isMountedRef.current) return;
+    setSelectedRow(row);
+    setDesiredStatus(checked ? 'active' : 'inactive');
+    setSwitchOpen(true);
+  }, []);
+
+  const handleEditClick = useCallback((id: string) => {
+    router.push(`/Categories/AddCategory?id=${id}`);
+  }, [router]);
+
+  const handleDialogCancel = useCallback(() => {
+    if (!isMountedRef.current) return;
+    setSwitchOpen(false);
+    setSelectedRow(null);
+    setDesiredStatus(null);
+  }, []);
+
+  const handleDialogConfirm = useCallback(async () => {
+    if (!selectedRow || !desiredStatus || !isMountedRef.current) return;
+
+    // Prevent activating subcategory if parent is inactive
+    if (
+      selectedRow.type === 'subcategory' &&
+      desiredStatus === 'active'
+    ) {
+      const parent = categories.find(
+        (cat: { category_id: any; }) => cat.category_id === selectedRow.parentId
+      );
+      if (parent && !parent.category_status) {
+        toast.error('Cannot activate subcategory while parent is inactive');
+        setSwitchOpen(false);
+        setSelectedRow(null);
+        setDesiredStatus(null);
+        return;
+      }
+    }
+
+    await updateCategoryStatus(selectedRow.id, desiredStatus);
+  }, [selectedRow, desiredStatus, categories, updateCategoryStatus]);
 
   const columns = React.useMemo<ColumnDef<any>[]>(() => [
     {
@@ -316,11 +404,7 @@ const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') =
             <Switch
               checked={isActive}
               disabled={isDisabled}
-              onCheckedChange={(checked) => {
-                setSelectedRow(row.original);
-                setDesiredStatus(checked ? 'active' : 'inactive');
-                setSwitchOpen(true);
-              }}
+              onCheckedChange={(checked) => handleSwitchChange(row.original, checked)}
             />
             <div className="flex flex-col">
               <Badge 
@@ -359,7 +443,7 @@ const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') =
           <Button
             variant="outline"
             size="sm"
-            onClick={() => router.push(`/Categories/AddCategory?id=${row.original.id}`)}
+            onClick={() => handleEditClick(row.original.id)}
             disabled={row.original.status === 'inactive'}
             className="hover:bg-accent hover:text-accent-foreground"
           >
@@ -368,14 +452,16 @@ const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') =
         </div>
       ),
     },
-  ], [expandedRows, normalizedData]);
+  ], [expandedRows, normalizedData, toggleRow, handleSwitchChange, handleEditClick]);
 
-  const table = useReactTable({
+  const tableConfig = React.useMemo(() => ({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getRowId: (row) => `${row.type}-${row.id}`,
-  });
+    getRowId: (row: any) => `${row.type}-${row.id}`,
+  }), [data, columns]);
+
+  const table = useReactTable(tableConfig);
 
   return (
     <div className="space-y-6">
@@ -391,7 +477,7 @@ const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') =
           <Button
             variant="outline"
             size="sm"
-            onClick={() => refreshCategories()}
+            onClick={refreshCategories}
             disabled={isRefreshing}
             className="hover:bg-accent"
           >
@@ -541,38 +627,13 @@ const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') =
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel
-              onClick={() => {
-                setSwitchOpen(false);
-                setSelectedRow(null);
-                setDesiredStatus(null);
-              }}
+              onClick={handleDialogCancel}
               className="hover:bg-muted"
             >
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={async () => {
-                if (!selectedRow || !desiredStatus) return;
-
-                // Prevent activating subcategory if parent is inactive
-                if (
-                  selectedRow.type === 'subcategory' &&
-                  desiredStatus === 'active'
-                ) {
-                  const parent = categories.find(
-                    (cat: { category_id: any; }) => cat.category_id === selectedRow.parentId
-                  );
-                  if (parent && !parent.category_status) {
-                    toast.error('Cannot activate subcategory while parent is inactive');
-                    setSwitchOpen(false);
-                    setSelectedRow(null);
-                    setDesiredStatus(null);
-                    return;
-                  }
-                }
-
-                await updateCategoryStatus(selectedRow.id, desiredStatus);
-              }}
+              onClick={handleDialogConfirm}
               className={`${
                 desiredStatus === 'active'
                   ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800'

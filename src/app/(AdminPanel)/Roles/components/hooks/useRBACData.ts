@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { 
   roleService, 
@@ -10,6 +10,9 @@ import {
 } from '@/services/rbac';
 
 export function useRBACData() {
+  // Ref to track if component is mounted to prevent memory leaks
+  const isMountedRef = useRef(true);
+  
   // Loading states
   const [rolesLoading, setRolesLoading] = useState(false);
   const [permissionsLoading, setPermissionsLoading] = useState(false);
@@ -20,51 +23,88 @@ export function useRBACData() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermission[]>([]);
 
-  // Data fetching functions
-  const fetchRoles = async () => {
+  // Data fetching functions with useCallback for optimization and memory leak prevention
+  const fetchRoles = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    
     try {
       setRolesLoading(true);
       const response = await roleService.getAll();
-      setRoles(response.data);
+      
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setRoles(response.data);
+      }
     } catch (error) {
-      toast.error('Failed to fetch roles');
-      console.error('Error fetching roles:', error);
+      if (isMountedRef.current) {
+        toast.error('Failed to fetch roles');
+        console.error('Error fetching roles:', error);
+      }
     } finally {
-      setRolesLoading(false);
+      if (isMountedRef.current) {
+        setRolesLoading(false);
+      }
     }
-  };
+  }, []);
 
-  const fetchPermissions = async () => {
+  const fetchPermissions = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    
     try {
       setPermissionsLoading(true);
       const response = await permissionService.getAll();
-      setPermissions(response.data);
+      
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setPermissions(response.data);
+      }
     } catch (error) {
-      toast.error('Failed to fetch permissions');
-      console.error('Error fetching permissions:', error);
+      if (isMountedRef.current) {
+        toast.error('Failed to fetch permissions');
+        console.error('Error fetching permissions:', error);
+      }
     } finally {
-      setPermissionsLoading(false);
+      if (isMountedRef.current) {
+        setPermissionsLoading(false);
+      }
     }
-  };
+  }, []);
 
-  const fetchRolePermissions = async () => {
+  const fetchRolePermissions = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    
     try {
       setRolePermissionsLoading(true);
       const response = await rolePermissionService.getAll();
-      setRolePermissions(response.data);
+      
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setRolePermissions(response.data);
+      }
     } catch (error) {
-      toast.error('Failed to fetch role permissions');
-      console.error('Error fetching role permissions:', error);
+      if (isMountedRef.current) {
+        toast.error('Failed to fetch role permissions');
+        console.error('Error fetching role permissions:', error);
+      }
     } finally {
-      setRolePermissionsLoading(false);
+      if (isMountedRef.current) {
+        setRolePermissionsLoading(false);
+      }
     }
-  };
+  }, []);
 
   // Initial data fetch
   useEffect(() => {
     fetchRoles();
     fetchPermissions();
     fetchRolePermissions();
+  }, [fetchRoles, fetchPermissions, fetchRolePermissions]);
+
+  // Cleanup effect to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
   return {

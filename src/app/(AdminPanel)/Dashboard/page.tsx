@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -125,7 +125,8 @@ const DashboardPage = () => {
   const { formattedStats, isLoading, error, refetch } = useDashboardStats();
   const { mounted, getCardHoverClass, getIconAnimationClass, getButtonAnimationClass } = useThemeAnimations();
 
-  const getTrendIcon = (direction: 'up' | 'down' | 'neutral') => {
+  // Memoize trend icon function to prevent unnecessary re-renders
+  const getTrendIcon = useCallback((direction: 'up' | 'down' | 'neutral') => {
     switch (direction) {
       case 'up':
         return <TrendingUp className="w-4 h-4 text-green-500" />;
@@ -134,9 +135,10 @@ const DashboardPage = () => {
       default:
         return <Minus className="w-4 h-4 text-gray-500" />;
     }
-  };
+  }, []);
 
-  const statsConfig = [
+  // Memoize stats configuration to prevent unnecessary re-renders
+  const statsConfig = useMemo(() => [
     {
       title: "Categories",
       icon: <LayoutGrid className="w-6 h-6" />,
@@ -177,9 +179,10 @@ const DashboardPage = () => {
       iconBg: "bg-purple-100 dark:bg-purple-900/30",
       iconColor: "text-purple-600 dark:text-purple-400",
     },
-  ];
+  ], []);
 
-  const quickActions = [
+  // Memoize quick actions configuration to prevent unnecessary re-renders
+  const quickActions = useMemo(() => [
     {
       title: "Events",
       icon: <CalendarCheck className="w-5 h-5" />,
@@ -208,7 +211,19 @@ const DashboardPage = () => {
       href: "/Activity",
       color: "text-teal-600 dark:text-teal-400",
     },
-  ];
+  ], []);
+
+  // Memoize formatted date to prevent unnecessary recalculations
+  const formattedDate = useMemo(() => {
+    return new Date().toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }, []);
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -243,7 +258,7 @@ const DashboardPage = () => {
               Dashboard
             </h1>
             <p className="text-muted-foreground">
-              Welcome back, <span className="font-semibold text-foreground">{user.name}</span>! Here's an overview of your ticket booking system.
+              Welcome back, <span className="font-semibold text-foreground">{user.name}</span>! Here&apos;s an overview of your ticket booking system.
             </p>
           </div>
         </div>
@@ -396,14 +411,7 @@ const DashboardPage = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-center sm:text-left">
             <p className="text-sm text-muted-foreground">
-              Last updated: {new Date().toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
+              Last updated: {formattedDate}
             </p>
           </div>
           <div className="flex items-center gap-2">

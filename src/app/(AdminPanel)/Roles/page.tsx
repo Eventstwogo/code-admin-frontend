@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -96,42 +96,80 @@ export default function RBACPage() {
     handleToggleRolePermissionStatus,
   } = useRolePermissionActions({ fetchRolePermissions });
 
-  // Form handlers
-  const handleRoleSubmit = async (data: RoleFormData) => {
+  // Form handlers with useCallback optimization
+  const handleRoleSubmit = useCallback(async (data: RoleFormData) => {
     if (editingRole) {
       await handleUpdateRole(editingRole.role_id, data);
       setEditingRole(null);
     } else {
       await handleCreateRole(data);
     }
-  };
+  }, [editingRole, handleUpdateRole, handleCreateRole]);
 
-  const handlePermissionSubmit = async (data: PermissionFormData) => {
+  const handlePermissionSubmit = useCallback(async (data: PermissionFormData) => {
     if (editingPermission) {
       await handleUpdatePermission(editingPermission.permission_id, data);
       setEditingPermission(null);
     } else {
       await handleCreatePermission(data);
     }
-  };
+  }, [editingPermission, handleUpdatePermission, handleCreatePermission]);
 
-  const handleRolePermissionSubmit = async (data: RolePermissionFormData) => {
+  const handleRolePermissionSubmit = useCallback(async (data: RolePermissionFormData) => {
     await handleCreateRolePermission(data);
-  };
+  }, [handleCreateRolePermission]);
 
-  // Edit handlers
-  const handleEditRole = (role: Role) => {
+  // Edit handlers with useCallback optimization
+  const handleEditRole = useCallback((role: Role) => {
     setEditingRole(role);
     setRoleDialog(true);
-  };
+  }, []);
 
-  const handleEditPermission = (permission: Permission) => {
+  const handleEditPermission = useCallback((permission: Permission) => {
     setEditingPermission(permission);
     setPermissionDialog(true);
-  };
+  }, []);
 
-  // Delete confirmation handler
-  const handleDeleteConfirm = () => {
+  // Dialog handlers with useCallback optimization
+  const handleOpenRoleDialog = useCallback(() => {
+    setEditingRole(null);
+    setRoleDialog(true);
+  }, []);
+
+  const handleOpenPermissionDialog = useCallback(() => {
+    setEditingPermission(null);
+    setPermissionDialog(true);
+  }, []);
+
+  const handleOpenRolePermissionDialog = useCallback(() => {
+    setRolePermissionDialog(true);
+  }, []);
+
+  // Dialog close handlers with useCallback optimization
+  const handleCloseRoleDialog = useCallback((open: boolean) => {
+    setRoleDialog(open);
+    if (!open) {
+      setEditingRole(null);
+    }
+  }, []);
+
+  const handleClosePermissionDialog = useCallback((open: boolean) => {
+    setPermissionDialog(open);
+    if (!open) {
+      setEditingPermission(null);
+    }
+  }, []);
+
+  const handleCloseRolePermissionDialog = useCallback((open: boolean) => {
+    setRolePermissionDialog(open);
+  }, []);
+
+  const handleCloseDeleteConfirm = useCallback((open: boolean) => {
+    setDeleteConfirm(prev => ({ ...prev, open }));
+  }, []);
+
+  // Delete confirmation handler with useCallback optimization
+  const handleDeleteConfirm = useCallback(() => {
     if (deleteConfirm.type === 'role') {
       handleDeleteRole(deleteConfirm.id);
     } else if (deleteConfirm.type === 'permission') {
@@ -140,7 +178,7 @@ export default function RBACPage() {
       handleDeleteRolePermission(deleteConfirm.id);
     }
     setDeleteConfirm({ open: false, type: 'role', id: '', name: '' });
-  };
+  }, [deleteConfirm, handleDeleteRole, handleDeletePermission, handleDeleteRolePermission]);
 
   const isStatsLoading = rolesLoading || permissionsLoading || rolePermissionsLoading;
 
@@ -206,10 +244,7 @@ export default function RBACPage() {
                     />
                   </div>
                   <Button 
-                    onClick={() => {
-                      setEditingRole(null);
-                      setRoleDialog(true);
-                    }}
+                    onClick={handleOpenRoleDialog}
                     className="gap-2 shadow-sm"
                   >
                     <Plus className="h-4 w-4" />
@@ -256,10 +291,7 @@ export default function RBACPage() {
                     />
                   </div>
                   <Button 
-                    onClick={() => {
-                      setEditingPermission(null);
-                      setPermissionDialog(true);
-                    }}
+                    onClick={handleOpenPermissionDialog}
                     className="gap-2 shadow-sm"
                   >
                     <Plus className="h-4 w-4" />
@@ -296,7 +328,7 @@ export default function RBACPage() {
                   </CardTitle>
                 </div>
                 <Button 
-                  onClick={() => setRolePermissionDialog(true)}
+                  onClick={handleOpenRolePermissionDialog}
                   className="gap-2 shadow-sm"
                 >
                   <Plus className="h-4 w-4" />
@@ -326,7 +358,7 @@ export default function RBACPage() {
         {/* Forms */}
         <RoleForm
           open={roleDialog}
-          onOpenChange={setRoleDialog}
+          onOpenChange={handleCloseRoleDialog}
           editingRole={editingRole}
           onSubmit={handleRoleSubmit}
           loading={roleLoading}
@@ -334,7 +366,7 @@ export default function RBACPage() {
 
         <PermissionForm
           open={permissionDialog}
-          onOpenChange={setPermissionDialog}
+          onOpenChange={handleClosePermissionDialog}
           editingPermission={editingPermission}
           onSubmit={handlePermissionSubmit}
           loading={permissionLoading}
@@ -342,7 +374,7 @@ export default function RBACPage() {
 
         <RolePermissionForm
           open={rolePermissionDialog}
-          onOpenChange={setRolePermissionDialog}
+          onOpenChange={handleCloseRolePermissionDialog}
           roles={roles}
           permissions={permissions}
           onSubmit={handleRolePermissionSubmit}
@@ -352,7 +384,7 @@ export default function RBACPage() {
         {/* Confirmation Dialog */}
         <ConfirmDialog
           open={deleteConfirm.open}
-          onOpenChange={(open) => setDeleteConfirm(prev => ({ ...prev, open }))}
+          onOpenChange={handleCloseDeleteConfirm}
           title={`Delete ${deleteConfirm.type === 'rolePermission' ? 'Role Permission' : deleteConfirm.type === 'role' ? 'Role' : 'Permission'}`}
           description={`Are you sure you want to delete "${deleteConfirm.name}"? This action cannot be undone.`}
           confirmText="Delete"
