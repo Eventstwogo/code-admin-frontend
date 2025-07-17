@@ -56,7 +56,7 @@ export default function ProfilePage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  const { userId } = useStore();
+  const userId = useStore(state => state.userId);
 
   const fetchUserDetails = async (userId: string) => {
     try {

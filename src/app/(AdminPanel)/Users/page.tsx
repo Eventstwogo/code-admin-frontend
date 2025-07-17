@@ -492,6 +492,18 @@ const onSubmit = async (data: FormData) => {
           </p>
         </div>
 
+        <Button 
+          className="flex items-center gap-2 button-hover"
+          onClick={() => {
+            setEditingUser(null);
+            reset();
+            setOpen(true);
+          }}
+        >
+          <UserPlus className="h-4 w-4" />
+          Add User
+        </Button>
+
         <Dialog
           open={open}
           onOpenChange={(state) => {
@@ -502,12 +514,6 @@ const onSubmit = async (data: FormData) => {
             }
           }}
         >
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2 button-hover">
-              <UserPlus className="h-4 w-4" />
-              Add User
-            </Button>
-          </DialogTrigger>
 
           <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto custom-scrollbar">
             <DialogHeader>

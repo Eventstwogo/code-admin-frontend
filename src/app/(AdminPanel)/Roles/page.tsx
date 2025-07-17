@@ -18,7 +18,7 @@ import {
   Settings
 } from 'lucide-react';
 import { Role, Permission } from '@/services/rbac';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
+import dynamic from 'next/dynamic';
 
 // Import our new components
 import { useRBACData } from './components/hooks/useRBACData';
@@ -33,6 +33,8 @@ import { RoleTable } from './components/RoleTable';
 import { PermissionTable } from './components/PermissionTable';
 import { RolePermissionTable } from './components/RolePermissionTable';
 import { DeleteConfirmState, RoleFormData, PermissionFormData, RolePermissionFormData } from './components/types';
+
+const ConfirmDialog = dynamic(() => import('@/components/ConfirmDialog').then(mod => mod.ConfirmDialog), { ssr: false });
 
 export default function RBACPage() {
   // State management

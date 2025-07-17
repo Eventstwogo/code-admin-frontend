@@ -10,6 +10,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import axiosInstance from "@/lib/axiosInstance";
 import { toast } from "sonner";
 import BackgroundImage from "@/components/BackgroundImage";
+import Image from 'next/image';
 
 const forgotPasswordSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email format"),
@@ -47,7 +48,7 @@ export default function ForgotPasswordPage() {
         className="relative z-40 backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 dark:text-gray-100 rounded-3xl p-10 w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col gap-6"
       >
         <div className="flex flex-col items-center mb-4 gap-2">
-          <img src="/logo.png" alt="Logo" width={60} height={60} className="object-contain drop-shadow-lg" />
+          <Image src="/logo.png" alt="Logo" width={60} height={60} className="object-contain drop-shadow-lg" />
           <span className="text-lg font-semibold text-gray-700 dark:text-gray-200">Forgot your password?</span>
           <span className="text-sm text-gray-500 dark:text-gray-400">We'll send you a reset link</span>
         </div>

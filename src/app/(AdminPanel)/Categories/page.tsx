@@ -42,6 +42,8 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import axiosInstance from '@/lib/axiosInstance';
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import Image from 'next/image';
+import useSWR from 'swr';
 
 // Image component with fallback
 const CategoryImage = ({ src, alt, name }: { src?: string; alt: string; name: string }) => {
@@ -69,13 +71,13 @@ const CategoryImage = ({ src, alt, name }: { src?: string; alt: string; name: st
           </span>
         </div>
       )}
-      <img
+      <Image
         src={src}
         alt={alt}
-        className={`w-10 h-10 rounded-lg object-cover shadow-sm border border-border transition-opacity ${
-          isLoading ? 'opacity-0' : 'opacity-100'
-        }`}
-        onLoad={() => setIsLoading(false)}
+        width={40}
+        height={40}
+        className={`w-10 h-10 rounded-lg object-cover shadow-sm border border-border transition-opacity ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+        onLoadingComplete={() => setIsLoading(false)}
         onError={() => {
           setImageError(true);
           setIsLoading(false);
@@ -115,40 +117,43 @@ const TableRowSkeleton = () => (
   </TableRow>
 );
 
+// SWR fetcher for categories
+const fetchCategories = async () => {
+  const response = await axiosInstance('/api/v1/categories/list');
+  return response.data.data || [];
+};
+
+function useCategoriesSWR() {
+  const { data, error, isLoading, mutate } = useSWR('categories-list', fetchCategories, {
+    revalidateOnFocus: false,
+    dedupingInterval: 60000, // 1 minute
+  });
+  return {
+    categories: data || [],
+    error,
+    isLoading,
+    mutate,
+  };
+}
+
 const CategoriesTable = () => {
-  const [categories, setCategories] = React.useState<any[]>([]);
+  // const [categories, setCategories] = React.useState<any[]>([]);
   const [expandedRows, setExpandedRows] = React.useState<Record<string, boolean>>({});
   const [switchOpen, setSwitchOpen] = React.useState(false);
   const [selectedRow, setSelectedRow] = React.useState<any | null>(null);
   const [desiredStatus, setDesiredStatus] = React.useState<'active' | 'inactive' | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
+  // const [isLoading, setIsLoading] = React.useState(true);
+  // const [error, setError] = React.useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
   const router = useRouter();
-  const fetchCategories = async (showRefreshIndicator = false) => {
-    try {
-      if (showRefreshIndicator) {
-        setIsRefreshing(true);
-      } else {
-        setIsLoading(true);
-      }
-      setError(null);
-      
-      const response = await axiosInstance('/api/v1/categories/list');
-      setCategories(response.data.data || []);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      setError('Failed to load categories. Please try again.');
-      toast.error('Failed to load categories');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
+  const { categories, error, isLoading, mutate } = useCategoriesSWR();
+
+  const refreshCategories = async () => {
+    setIsRefreshing(true);
+    await mutate();
+    setIsRefreshing(false);
   };
-  React.useEffect(() => {
-    fetchCategories();
-  }, []);
 
   const toggleRow = (id: string) => {
     setExpandedRows(prev => ({
@@ -172,7 +177,7 @@ const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') =
     }
 
     toast.success(`Category ${status === 'active' ? 'activated' : 'deactivated'} successfully`);
-    await fetchCategories(true);
+    await mutate();
   } catch (error) {
     toast.error('Failed to update status');
   } finally {
@@ -183,7 +188,7 @@ const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') =
 };
 
   const normalizedData = React.useMemo(() => {
-    return categories.map((cat) => ({
+    return categories.map((cat: { category_id: any; category_name: any; category_slug: any; category_description: any; category_img_thumbnail: any; category_status: any; subcategories: any; }) => ({
       id: cat.category_id,
       name: cat.category_name,
       slug: cat.category_slug,
@@ -191,7 +196,7 @@ const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') =
       image: cat.category_img_thumbnail || null,
       status: cat.category_status ? 'inactive' : 'active',
       type: 'category',
-      subcategories: (cat.subcategories || []).map((sub) => ({
+      subcategories: (cat.subcategories || []).map((sub: { subcategory_id: any; subcategory_name: any; subcategory_slug: any; subcategory_description: any; subcategory_img_thumbnail: any; subcategory_status: any; }) => ({
         id: sub.subcategory_id,
         parentId: cat.category_id,
         name: sub.subcategory_name,
@@ -302,7 +307,7 @@ const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') =
         // Prevent subcategory activation if parent is inactive
         const isParentInactive =
           row.original.type === 'subcategory' &&
-          normalizedData.find(cat => cat.id === row.original.parentId)?.status === 'inactive';
+          normalizedData.find((cat: { id: any; }) => cat.id === row.original.parentId)?.status === 'inactive';
 
         const isDisabled = isParentInactive;
 
@@ -386,7 +391,7 @@ const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') =
           <Button
             variant="outline"
             size="sm"
-            onClick={() => fetchCategories(true)}
+            onClick={() => refreshCategories()}
             disabled={isRefreshing}
             className="hover:bg-accent"
           >
@@ -555,7 +560,7 @@ const updateCategoryStatus = async (id: string, status: 'active' | 'inactive') =
                   desiredStatus === 'active'
                 ) {
                   const parent = categories.find(
-                    (cat) => cat.category_id === selectedRow.parentId
+                    (cat: { category_id: any; }) => cat.category_id === selectedRow.parentId
                   );
                   if (parent && !parent.category_status) {
                     toast.error('Cannot activate subcategory while parent is inactive');

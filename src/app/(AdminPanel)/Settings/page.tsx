@@ -29,13 +29,13 @@ import {
   Upload,
   X,
   CheckCircle,
-  AlertCircle,
   Info,
   Shield,
   Clock,
   Check,
   Minus
 } from "lucide-react";
+import NextImage from 'next/image';
 
 const SettingsForm = () => {
   const [defaultPassword, setDefaultPassword] = useState("");
@@ -635,9 +635,11 @@ const SettingsForm = () => {
                     <Label className="text-sm font-medium">Current Logo</Label>
                     <div className="relative inline-block">
                       <div className="p-4 bg-muted/50 rounded-lg border-2 border-dashed border-muted-foreground/25">
-                        <img
+                        <NextImage
                           src={logoPreview}
                           alt="Company Logo"
+                          width={200}
+                          height={60}
                           className="h-20 max-w-xs object-contain rounded"
                         />
                       </div>

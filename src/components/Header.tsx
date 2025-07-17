@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Menu, Bell } from 'lucide-react';
-import DynamicBreadcrumb from './BreadCrump'
+import dynamic from 'next/dynamic';
 import { Separator } from './ui/separator';
 import { ModeToggle } from './ThemToggle';
 import { SearchBarWithIcon } from './Searchbar';
@@ -41,8 +41,12 @@ export default function AppHeader({ toggleSidebar }: Readonly<AppHeaderProps>) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { userId } = useStore();
+  // Replace destructuring with selector
+  const userId = useStore(state => state.userId);
   const router = useRouter();
+
+  // Replace static import with dynamic import
+  const DynamicBreadcrumb = dynamic(() => import('./BreadCrump'), { ssr: false });
 
 
   // Fetch user details with proper typing and error handling

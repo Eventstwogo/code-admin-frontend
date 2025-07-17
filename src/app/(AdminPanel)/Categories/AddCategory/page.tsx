@@ -28,6 +28,7 @@ import { CategoryFormSkeleton } from "@/components/CategoryFormSkeleton";
 import axiosInstance from "@/lib/axiosInstance";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import Image from 'next/image';
 
 // Zod Schema
 const categorySchema = z.object({
@@ -288,6 +289,13 @@ const CategoryCreation = () => {
     return <CategoryFormSkeleton />;
   }
 
+  // Define feature options as a tuple with explicit name values
+  const featureOptions = [
+    { name: 'features.featured' as const, key: 'featured', label: 'Featured Category', description: 'Show in featured section' },
+    { name: 'features.homepage' as const, key: 'homepage', label: 'Show in Menu', description: 'Display in main navigation' },
+    { name: 'features.promotions' as const, key: 'promotions', label: 'Promotions', description: 'Enable for promotional content' }
+  ] as const;
+
   return (
     <div className="min-h-screen bg-background transition-colors duration-200 custom-scrollbar">
       <div className="container mx-auto px-4 py-6 max-w-7xl animate-in fade-in-0 duration-500">
@@ -360,11 +368,13 @@ const CategoryCreation = () => {
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                {imagePreview ? (
+                {imagePreview && (
                   <div className="relative">
-                    <img
+                    <Image
                       src={imagePreview}
                       alt="Preview"
+                      width={400}
+                      height={208}
                       className="mx-auto mb-4 h-52 w-full object-contain rounded-lg border border-border"
                     />
                     <Button
@@ -377,7 +387,8 @@ const CategoryCreation = () => {
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                ) : (
+                )}
+                {imagePreview === null && (
                   <div className="space-y-4">
                     <Upload className="mx-auto h-16 w-16 text-muted-foreground" />
                     <div className="space-y-2">
@@ -498,7 +509,7 @@ const CategoryCreation = () => {
                       <SelectContent>
                         <SelectItem value="none">None (Root Category)</SelectItem>
                         {categories.map((category: any) => (
-                          <SelectItem key={category.id} value={category.category_id}>
+                          <SelectItem key={category.category_id} value={category.category_id}>
                             {category.category_name}
                           </SelectItem>
                         ))}
@@ -522,11 +533,7 @@ const CategoryCreation = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {[
-                { key: "featured", label: "Featured Category", description: "Show in featured section" },
-                { key: "homepage", label: "Show in Menu", description: "Display in main navigation" },
-                { key: "promotions", label: "Promotions", description: "Enable for promotional content" }
-              ].map((feature) => (
+              {featureOptions.map((feature) => (
                 <div key={feature.key} className="flex items-center justify-between p-4 rounded-lg border border-border/50 hover:bg-accent/20 transition-colors">
                   <div className="flex-1">
                     <Label htmlFor={feature.key} className="text-sm font-medium text-foreground cursor-pointer">
@@ -537,12 +544,12 @@ const CategoryCreation = () => {
                     </p>
                   </div>
                   <Controller
-                    name={`features.${feature.key}` as const}
+                    name={feature.name}
                     control={control}
                     render={({ field }) => (
                       <Switch
                         id={feature.key}
-                        checked={field.value}
+                        checked={!!field.value}
                         onCheckedChange={field.onChange}
                         className="ml-4"
                       />

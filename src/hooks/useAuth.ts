@@ -4,7 +4,11 @@ import useStore from '@/lib/Zustand';
 import { refreshTokenIfNeeded } from '@/lib/auth';
 
 export const useAuth = () => {
-  const { isAuthenticated, userId, role, checkAuth } = useStore();
+  // Replace destructuring with selectors
+  const isAuthenticated = useStore(state => state.isAuthenticated);
+  const userId = useStore(state => state.userId);
+  const role = useStore(state => state.role);
+  const checkAuth = useStore(state => state.checkAuth);
 
   useEffect(() => {
     // Check authentication status on mount

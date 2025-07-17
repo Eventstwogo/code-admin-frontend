@@ -108,6 +108,7 @@ const isLinkActive = (item: NavItem) => {
                       ? 'bg-purple-600/90 text-white shadow-md dark:bg-purple-700'
                       : 'hover:bg-purple-100 dark:hover:bg-neutral-800/60 text-gray-700 dark:text-gray-300'
                   }`}
+                  aria-label={collapsed ? item.label : undefined}
                 >
                   <Icon className="w-5 h-5 mr-2 shrink-0" />
                   {!collapsed && (
