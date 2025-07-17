@@ -254,4 +254,126 @@
   .table-row-inactive:hover {
     @apply bg-red-50 dark:bg-red-950/20;
   }
+
+  /* Enhanced form field animations and focus states */
+  .form-field-enhanced {
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .form-field-enhanced:focus-within {
+    @apply scale-[1.02] shadow-lg ring-2 ring-primary/20 border-primary/60;
+  }
+
+  /* Enhanced card hover with better shadows and theme support */
+  .card-enhanced {
+    @apply transition-all duration-300 ease-out backdrop-blur-sm;
+  }
+  
+  .card-enhanced:hover {
+    @apply shadow-2xl -translate-y-2 scale-[1.01];
+  }
+
+  /* Better focus indicators for accessibility */
+  .focus-enhanced:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+
+  /* Smooth color transitions for theme switching */
+  .theme-transition {
+    @apply transition-colors duration-300 ease-in-out;
+  }
+
+  /* Enhanced button hover effects */
+  .button-enhanced {
+    @apply transition-all duration-200 ease-out;
+  }
+  
+  .button-enhanced:hover {
+    @apply scale-105 shadow-lg brightness-110;
+  }
+  
+  .button-enhanced:active {
+    @apply scale-95;
+  }
+
+  /* Enhanced drag and drop styling */
+  .drag-active {
+    @apply bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 border-primary/60 shadow-lg scale-[1.02];
+  }
+  
+  .drag-hover {
+    @apply hover:bg-gradient-to-br hover:from-accent/10 hover:to-primary/5 hover:border-primary/40 hover:shadow-md hover:scale-[1.01];
+  }
+
+  /* Better error state styling with theme support */
+  .error-enhanced {
+    @apply bg-gradient-to-r from-destructive/5 to-destructive/10 border-destructive/30 text-destructive dark:from-destructive/10 dark:to-destructive/5 dark:border-destructive/40;
+  }
+
+  /* Success state styling with theme support */
+  .success-enhanced {
+    @apply bg-gradient-to-r from-green-500/5 to-green-600/10 border-green-500/30 text-green-700 dark:text-green-400 dark:from-green-500/10 dark:to-green-600/5 dark:border-green-500/40;
+  }
+
+  /* Warning state styling with theme support */
+  .warning-enhanced {
+    @apply bg-gradient-to-r from-orange-500/5 to-orange-600/10 border-orange-500/30 text-orange-700 dark:text-orange-400 dark:from-orange-500/10 dark:to-orange-600/5 dark:border-orange-500/40;
+  }
+
+  /* Glass morphism effect for modern UI */
+  .glass-effect {
+    @apply backdrop-blur-md bg-background/80 border-border/50;
+  }
+  
+  .glass-effect-strong {
+    @apply backdrop-blur-xl bg-background/90 border-border/60;
+  }
+
+  /* Enhanced gradient backgrounds for better visual hierarchy */
+  .gradient-bg-subtle {
+    background: linear-gradient(135deg, 
+      var(--background) 0%, 
+      var(--muted) 100%
+    );
+  }
+
+  /* Improved switch styling for better theme support */
+  .switch-enhanced[data-state="checked"] {
+    @apply bg-gradient-to-r from-green-500 to-green-600 shadow-lg dark:from-green-600 dark:to-green-700;
+  }
+  
+  .switch-enhanced[data-state="unchecked"] {
+    @apply bg-gradient-to-r from-muted to-muted/80 dark:from-muted/60 dark:to-muted/40;
+  }
+
+  /* Enhanced scrollbar with better theme support */
+  .scrollbar-enhanced::-webkit-scrollbar {
+    @apply w-2;
+  }
+  
+  .scrollbar-enhanced::-webkit-scrollbar-track {
+    @apply bg-muted/10 rounded-full;
+  }
+  
+  .scrollbar-enhanced::-webkit-scrollbar-thumb {
+    @apply bg-gradient-to-b from-muted-foreground/30 to-muted-foreground/50 rounded-full hover:from-muted-foreground/50 hover:to-muted-foreground/70 transition-colors duration-200;
+  }
+
+  /* Enhanced input field styling */
+  .input-enhanced {
+    @apply bg-background/50 border-border/60 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200 hover:border-primary/40;
+  }
+
+  /* Card header gradient backgrounds */
+  .card-header-primary {
+    @apply bg-gradient-to-r from-primary/5 to-accent/5;
+  }
+  
+  .card-header-success {
+    @apply bg-gradient-to-r from-green-500/5 to-blue-500/5;
+  }
+  
+  .card-header-info {
+    @apply bg-gradient-to-r from-blue-500/5 to-purple-500/5;
+  }
 }
