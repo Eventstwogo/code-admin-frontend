@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -34,14 +34,6 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const { login } = useStore();
-  const isMountedRef = useRef(true);
-
-  // Cleanup function to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
   const {
     register,
     handleSubmit,
@@ -71,9 +63,6 @@ export default function LoginPage() {
         },
       });
   
-      // Check if component is still mounted before proceeding
-      if (!isMountedRef.current) return;
-      
       console.log('Login response:', response.data);
       const statusCode = response.data.statusCode;
       const userId = response.data.user_id;
@@ -93,9 +82,6 @@ export default function LoginPage() {
         toast.success('Login Success. Please reset your password.');
       }
     } catch (error: unknown) {
-      // Check if component is still mounted before showing error
-      if (!isMountedRef.current) return;
-      
       console.log('Login error:', error);
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response: { status: number; data: any } };
@@ -116,10 +102,7 @@ export default function LoginPage() {
         toast.error('An error occurred: ' + errorMessage);
       }
     } finally {
-      // Check if component is still mounted before updating loading state
-      if (isMountedRef.current) {
-        setIsSubmitting(false);
-      }
+      setIsSubmitting(false);
     }
   }, [login, router, isSubmitting]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -20,7 +20,6 @@ type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false);
-  const isMountedRef = useRef(true);
   
   const {
     register,
@@ -30,13 +29,6 @@ export default function ForgotPasswordPage() {
     resolver: zodResolver(forgotPasswordSchema),
   });
 
-  // Cleanup function to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
   const onSubmit = useCallback(async (data: ForgotPasswordFormData) => {
     if (isSubmitting) return; // Prevent multiple simultaneous requests
     
@@ -45,15 +37,9 @@ export default function ForgotPasswordPage() {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
       
-      // Check if component is still mounted before updating state
-      if (!isMountedRef.current) return;
-      
       setSubmitted(true);
       toast.success("Password reset link sent to registered email address.");
     } catch (error: any) {
-      // Check if component is still mounted before showing error
-      if (!isMountedRef.current) return;
-      
       toast.error(error?.response?.data?.message || "Failed to send reset link.");
     }
   }, [isSubmitting]);

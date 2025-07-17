@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -49,27 +49,16 @@ import useSWR from 'swr';
 const CategoryImage = React.memo(({ src, alt, name }: { src?: string; alt: string; name: string }) => {
   const [imageError, setImageError] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
-  const isMountedRef = useRef(true);
-
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
 
   const firstLetter = name.charAt(0).toUpperCase();
 
   const handleLoadingComplete = useCallback(() => {
-    if (isMountedRef.current) {
-      setIsLoading(false);
-    }
+    setIsLoading(false);
   }, []);
 
   const handleError = useCallback(() => {
-    if (isMountedRef.current) {
-      setImageError(true);
-      setIsLoading(false);
-    }
+    setImageError(true);
+    setIsLoading(false);
   }, []);
 
   if (!src || imageError) {
@@ -161,40 +150,25 @@ function useCategoriesSWR() {
 }
 
 const CategoriesTable = () => {
-  // const [categories, setCategories] = React.useState<any[]>([]);
   const [expandedRows, setExpandedRows] = React.useState<Record<string, boolean>>({});
   const [switchOpen, setSwitchOpen] = React.useState(false);
   const [selectedRow, setSelectedRow] = React.useState<any | null>(null);
   const [desiredStatus, setDesiredStatus] = React.useState<'active' | 'inactive' | null>(null);
-  // const [isLoading, setIsLoading] = React.useState(true);
-  // const [error, setError] = React.useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
-  const isMountedRef = useRef(true);
 
   const router = useRouter();
   const { categories, error, isLoading, mutate } = useCategoriesSWR();
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
   const refreshCategories = useCallback(async () => {
-    if (!isMountedRef.current) return;
     setIsRefreshing(true);
     try {
       await mutate();
     } finally {
-      if (isMountedRef.current) {
-        setIsRefreshing(false);
-      }
+      setIsRefreshing(false);
     }
   }, [mutate]);
 
   const toggleRow = useCallback((id: string) => {
-    if (!isMountedRef.current) return;
     setExpandedRows(prev => ({
       ...prev,
       [id]: !prev[id],
@@ -203,8 +177,6 @@ const CategoriesTable = () => {
 
 
   const updateCategoryStatus = useCallback(async (id: string, status: 'active' | 'inactive') => {
-    if (!isMountedRef.current) return;
-    
     const endpoint =
       status === 'active'
         ? `/api/v1/category-items/${id}/restore`       // PATCH for restore
@@ -217,20 +189,14 @@ const CategoriesTable = () => {
         await axiosInstance.delete(endpoint); // Soft delete → DELETE
       }
 
-      if (isMountedRef.current) {
-        toast.success(`Category ${status === 'active' ? 'activated' : 'deactivated'} successfully`);
-        await mutate();
-      }
+      toast.success(`Category ${status === 'active' ? 'activated' : 'deactivated'} successfully`);
+      await mutate();
     } catch (error) {
-      if (isMountedRef.current) {
-        toast.error('Failed to update status');
-      }
+      toast.error('Failed to update status');
     } finally {
-      if (isMountedRef.current) {
-        setSwitchOpen(false);
-        setSelectedRow(null);
-        setDesiredStatus(null);
-      }
+      setSwitchOpen(false);
+      setSelectedRow(null);
+      setDesiredStatus(null);
     }
   }, [mutate]);
 
@@ -268,7 +234,6 @@ const CategoriesTable = () => {
   }, [normalizedData, expandedRows]);
 
   const handleSwitchChange = useCallback((row: any, checked: boolean) => {
-    if (!isMountedRef.current) return;
     setSelectedRow(row);
     setDesiredStatus(checked ? 'active' : 'inactive');
     setSwitchOpen(true);
@@ -279,14 +244,13 @@ const CategoriesTable = () => {
   }, [router]);
 
   const handleDialogCancel = useCallback(() => {
-    if (!isMountedRef.current) return;
     setSwitchOpen(false);
     setSelectedRow(null);
     setDesiredStatus(null);
   }, []);
 
   const handleDialogConfirm = useCallback(async () => {
-    if (!selectedRow || !desiredStatus || !isMountedRef.current) return;
+    if (!selectedRow || !desiredStatus) return;
 
     // Prevent activating subcategory if parent is inactive
     if (

@@ -10,7 +10,7 @@
  * This is reflected in the UI display, switch states, and API calls.
  */
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -213,7 +213,7 @@ export default function UsersPage() {
     );
   }, [users, searchTerm]);
 
-  const fetchRoles = useCallback(async () => {
+  const fetchRoles = async () => {
     try {
       const response = await axiosInstance.get(
         "/api/v1/roles/?is_active=false"
@@ -223,9 +223,9 @@ export default function UsersPage() {
       console.error("Failed to fetch roles:", error);
       toast.error("Failed to fetch roles");
     }
-  }, []);
+  };
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = async () => {
     try {
       setIsInitialLoading(true);
       const response = await axiosInstance.get("/api/v1/admin/users/");
@@ -236,9 +236,9 @@ export default function UsersPage() {
     } finally {
       setIsInitialLoading(false);
     }
-  }, []);
+  };
 
-  const fetchAnalytics = useCallback(async () => {
+  const fetchAnalytics = async () => {
     try {
       setAnalyticsLoading(true);
       const response = await axiosInstance.get("/api/v1/admin/analytics");
@@ -249,28 +249,18 @@ export default function UsersPage() {
     } finally {
       setAnalyticsLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    let isMounted = true;
-
     const initializeData = async () => {
       try {
-        if (isMounted) {
-          await Promise.all([fetchRoles(), fetchUsers(), fetchAnalytics()]);
-        }
+        await Promise.all([fetchRoles(), fetchUsers(), fetchAnalytics()]);
       } catch (error) {
-        if (isMounted) {
-          console.error("Failed to initialize data:", error);
-        }
+        console.error("Failed to initialize data:", error);
       }
     };
 
     initializeData();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   const table = useReactTable({

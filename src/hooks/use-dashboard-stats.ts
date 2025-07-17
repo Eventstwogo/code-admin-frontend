@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect } from "react";
 
 interface DashboardStats {
   categories: number;
@@ -24,12 +24,8 @@ export const useDashboardStats = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Ref to track mounted state for cleanup
-  const isMountedRef = useRef(true);
 
-  // Memoized fetch function to prevent unnecessary re-renders
-  const fetchStats = useCallback(async () => {
+  const fetchStats = async () => {
     try {
       setIsLoading(true);
       
@@ -46,72 +42,54 @@ export const useDashboardStats = () => {
         activeUsers: 89,
       };
       
-      // Only update state if component is still mounted
-      if (isMountedRef.current) {
-        setStats(mockStats);
-        setError(null);
-      }
+      setStats(mockStats);
+      setError(null);
     } catch (err) {
-      if (isMountedRef.current) {
-        setError("Failed to fetch dashboard statistics");
-        console.error("Dashboard stats error:", err);
-      }
+      setError("Failed to fetch dashboard statistics");
+      console.error("Dashboard stats error:", err);
     } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     fetchStats();
-    
-    // Cleanup function to prevent memory leaks
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, [fetchStats]);
+  }, []);
 
-  // Memoize formatted stats to prevent unnecessary recalculations
-  const formattedStats = useMemo((): StatsItem[] => {
-    if (!stats) return [];
+  const formattedStats: StatsItem[] = !stats ? [] : [
+    {
+      title: "Categories",
+      count: stats.categories.toString(),
+      trend: "+2 this month",
+      trendDirection: 'up',
+      percentage: "+16.7%"
+    },
+    {
+      title: "Users",
+      count: stats.users.toLocaleString(),
+      trend: "+48 this week",
+      trendDirection: 'up',
+      percentage: "+4.1%"
+    },
+    {
+      title: "Revenue",
+      count: stats.revenue,
+      trend: "+12% from last month",
+      trendDirection: 'up',
+      percentage: "+12.0%"
+    },
+    {
+      title: "Events",
+      count: stats.events.toString(),
+      trend: "+5 this week",
+      trendDirection: 'up',
+      percentage: "+21.7%"
+    }
+  ];
 
-    return [
-      {
-        title: "Categories",
-        count: stats.categories.toString(),
-        trend: "+2 this month",
-        trendDirection: 'up',
-        percentage: "+16.7%"
-      },
-      {
-        title: "Users",
-        count: stats.users.toLocaleString(),
-        trend: "+48 this week",
-        trendDirection: 'up',
-        percentage: "+4.1%"
-      },
-      {
-        title: "Revenue",
-        count: stats.revenue,
-        trend: "+12% from last month",
-        trendDirection: 'up',
-        percentage: "+12.0%"
-      },
-      {
-        title: "Events",
-        count: stats.events.toString(),
-        trend: "+5 this week",
-        trendDirection: 'up',
-        percentage: "+21.7%"
-      }
-    ];
-  }, [stats]);
-
-  // Memoized refetch function to prevent unnecessary re-renders
-  const refetch = useCallback(() => {
+  const refetch = () => {
     fetchStats();
-  }, [fetchStats]);
+  };
 
   return {
     stats,
@@ -125,37 +103,28 @@ export const useDashboardStats = () => {
 // Hook for theme-aware animations
 export const useThemeAnimations = () => {
   const [mounted, setMounted] = useState(false);
-  
-  // Ref to track mounted state for cleanup
-  const isMountedRef = useRef(true);
 
   useEffect(() => {
     setMounted(true);
-    
-    // Cleanup function to prevent memory leaks
-    return () => {
-      isMountedRef.current = false;
-    };
   }, []);
 
-  // Memoize animation class functions to prevent unnecessary re-renders
-  const getCardHoverClass = useCallback((baseGradient: string) => {
+  const getCardHoverClass = (baseGradient: string) => {
     if (!mounted) return "";
     
     return `hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-300 hover:scale-[1.02]`;
-  }, [mounted]);
+  };
 
-  const getIconAnimationClass = useCallback(() => {
+  const getIconAnimationClass = () => {
     if (!mounted) return "";
     
     return "group-hover:scale-110 transition-transform duration-300";
-  }, [mounted]);
+  };
 
-  const getButtonAnimationClass = useCallback(() => {
+  const getButtonAnimationClass = () => {
     if (!mounted) return "";
     
     return "group-hover/btn:translate-x-1 transition-transform duration-200";
-  }, [mounted]);
+  };
 
   return {
     mounted,

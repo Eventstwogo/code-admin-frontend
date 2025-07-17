@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -96,80 +96,80 @@ export default function RBACPage() {
     handleToggleRolePermissionStatus,
   } = useRolePermissionActions({ fetchRolePermissions });
 
-  // Form handlers with useCallback optimization
-  const handleRoleSubmit = useCallback(async (data: RoleFormData) => {
+  // Form handlers
+  const handleRoleSubmit = async (data: RoleFormData) => {
     if (editingRole) {
       await handleUpdateRole(editingRole.role_id, data);
       setEditingRole(null);
     } else {
       await handleCreateRole(data);
     }
-  }, [editingRole, handleUpdateRole, handleCreateRole]);
+  };
 
-  const handlePermissionSubmit = useCallback(async (data: PermissionFormData) => {
+  const handlePermissionSubmit = async (data: PermissionFormData) => {
     if (editingPermission) {
       await handleUpdatePermission(editingPermission.permission_id, data);
       setEditingPermission(null);
     } else {
       await handleCreatePermission(data);
     }
-  }, [editingPermission, handleUpdatePermission, handleCreatePermission]);
+  };
 
-  const handleRolePermissionSubmit = useCallback(async (data: RolePermissionFormData) => {
+  const handleRolePermissionSubmit = async (data: RolePermissionFormData) => {
     await handleCreateRolePermission(data);
-  }, [handleCreateRolePermission]);
+  };
 
-  // Edit handlers with useCallback optimization
-  const handleEditRole = useCallback((role: Role) => {
+  // Edit handlers
+  const handleEditRole = (role: Role) => {
     setEditingRole(role);
     setRoleDialog(true);
-  }, []);
+  };
 
-  const handleEditPermission = useCallback((permission: Permission) => {
+  const handleEditPermission = (permission: Permission) => {
     setEditingPermission(permission);
     setPermissionDialog(true);
-  }, []);
+  };
 
-  // Dialog handlers with useCallback optimization
-  const handleOpenRoleDialog = useCallback(() => {
+  // Dialog handlers
+  const handleOpenRoleDialog = () => {
     setEditingRole(null);
     setRoleDialog(true);
-  }, []);
+  };
 
-  const handleOpenPermissionDialog = useCallback(() => {
+  const handleOpenPermissionDialog = () => {
     setEditingPermission(null);
     setPermissionDialog(true);
-  }, []);
+  };
 
-  const handleOpenRolePermissionDialog = useCallback(() => {
+  const handleOpenRolePermissionDialog = () => {
     setRolePermissionDialog(true);
-  }, []);
+  };
 
-  // Dialog close handlers with useCallback optimization
-  const handleCloseRoleDialog = useCallback((open: boolean) => {
+  // Dialog close handlers
+  const handleCloseRoleDialog = (open: boolean) => {
     setRoleDialog(open);
     if (!open) {
       setEditingRole(null);
     }
-  }, []);
+  };
 
-  const handleClosePermissionDialog = useCallback((open: boolean) => {
+  const handleClosePermissionDialog = (open: boolean) => {
     setPermissionDialog(open);
     if (!open) {
       setEditingPermission(null);
     }
-  }, []);
+  };
 
-  const handleCloseRolePermissionDialog = useCallback((open: boolean) => {
+  const handleCloseRolePermissionDialog = (open: boolean) => {
     setRolePermissionDialog(open);
-  }, []);
+  };
 
-  const handleCloseDeleteConfirm = useCallback((open: boolean) => {
+  const handleCloseDeleteConfirm = (open: boolean) => {
     setDeleteConfirm(prev => ({ ...prev, open }));
-  }, []);
+  };
 
-  // Delete confirmation handler with useCallback optimization
-  const handleDeleteConfirm = useCallback(() => {
+  // Delete confirmation handler
+  const handleDeleteConfirm = () => {
     if (deleteConfirm.type === 'role') {
       handleDeleteRole(deleteConfirm.id);
     } else if (deleteConfirm.type === 'permission') {
@@ -178,7 +178,7 @@ export default function RBACPage() {
       handleDeleteRolePermission(deleteConfirm.id);
     }
     setDeleteConfirm({ open: false, type: 'role', id: '', name: '' });
-  }, [deleteConfirm, handleDeleteRole, handleDeletePermission, handleDeleteRolePermission]);
+  };
 
   const isStatsLoading = rolesLoading || permissionsLoading || rolePermissionsLoading;
 

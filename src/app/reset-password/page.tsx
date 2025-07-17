@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -35,14 +35,6 @@ export default function ResetPasswordWithTokenPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const isMountedRef = useRef(true);
-
-  // Cleanup function to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
 
   const {
     register,
@@ -102,21 +94,12 @@ export default function ResetPasswordWithTokenPage() {
         }
       );
       
-      // Check if component is still mounted before updating state
-      if (!isMountedRef.current) return;
-      
       toast.success("Password reset successful. Please login.");
       router.push("/");
     } catch (error: any) {
-      // Check if component is still mounted before showing error
-      if (!isMountedRef.current) return;
-      
       toast.error(error?.response?.data?.message || "Failed to reset password.");
     } finally {
-      // Check if component is still mounted before updating loading state
-      if (isMountedRef.current) {
-        setSubmitting(false);
-      }
+      setSubmitting(false);
     }
   }, [email, token, router, submitting]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,14 +25,6 @@ export default function ResetPasswordPage() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
   const router = useRouter();
-  const isMountedRef = useRef(true);
-
-  // Cleanup function to prevent memory leaks
-  useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
 
   const passwordRequirements = [
     { label: "At least 8 characters", met: newPassword.length >= 8 },
@@ -85,22 +77,14 @@ export default function ResetPasswordPage() {
         new_password: newPassword
       });
       
-      // Check if component is still mounted before updating state
-      if (!isMountedRef.current) return;
-      
       if (response.data.statusCode === 200) {
         toast.success('Password reset successfully');
         router.push('/');
       }
     } catch (error) {
-      // Check if component is still mounted before showing error
-      if (!isMountedRef.current) return;
       toast.error('Failed to reset the password');
     } finally {
-      // Check if component is still mounted before updating loading state
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   }, [newPassword, confirmPassword, email, validatePassword, router, isLoading]);
 
