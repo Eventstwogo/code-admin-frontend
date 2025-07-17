@@ -1,5 +1,77 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+
+Sure! Here's the full content wrapped in a single `README.md` file format:
+
+````markdown
+# Running a Next.js App with PNPM
+
+This guide explains how to install `pnpm` and use it to run a Next.js application.
+
+## Prerequisites
+
+- Node.js (v16 or later recommended)
+
+## Step 1: Install PNPM
+
+You can install `pnpm` globally using one of the following commands:
+
+```bash
+# Using npm
+npm install -g pnpm
+
+# OR using corepack (Node.js 16.13+)
+corepack enable
+corepack prepare pnpm@latest --activate
+````
+
+Verify installation:
+
+```bash
+pnpm -v
+```
+
+## Step 2: Install Dependencies
+
+Navigate to your Next.js project directory and install dependencies:
+
+```bash
+pnpm install
+```
+
+## Step 3: Run the Development Server
+
+Start the development server:
+
+```bash
+pnpm dev
+```
+
+## Additional PNPM Commands
+
+* **Build the app**:
+
+  ```bash
+  pnpm build
+  ```
+
+* **Start the production server**:
+
+  ```bash
+  pnpm start
+  ```
+
+* **Lint the project**:
+
+  ```bash
+  pnpm lint
+  ```
+
+---
+
+Happy coding! 🚀
+
+
 ## Getting Started
 
 First, run the development server:
