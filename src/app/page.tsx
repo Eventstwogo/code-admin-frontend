@@ -1,7 +1,20 @@
+'use client';
+
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect } from "react";
+import useStore from "@/lib/Zustand";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const { isAuthenticated } = useStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/Dashboard');
+    }
+  }, [isAuthenticated, router]);
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 dark:from-gray-900 dark:via-indigo-900 dark:to-purple-900 px-4">
       <div className="w-full max-w-lg bg-white/90 dark:bg-gray-900/90 rounded-3xl shadow-2xl border border-indigo-100 dark:border-indigo-800 p-10 flex flex-col items-center gap-6">

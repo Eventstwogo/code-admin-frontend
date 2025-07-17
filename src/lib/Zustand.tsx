@@ -76,24 +76,50 @@ const useStore = create<StoreState>()(
         if (token) {
           try {
             const decoded: any = jwt.decode(token);
-            if (decoded?.uid && decoded?.rid) {
-              set({
-                userId: decoded.uid,
-                role: decoded.rid,
-                exp: decoded.exp,
-                isAuthenticated: true,
-                sessionId: sessionId,
-              });
+            if (decoded?.uid && decoded?.rid && decoded?.exp) {
+              // Check if token is expired
+              const currentTime = Date.now() / 1000;
+              if (decoded.exp > currentTime) {
+                // Token is still valid
+                set({
+                  userId: decoded.uid,
+                  role: decoded.rid,
+                  exp: decoded.exp,
+                  isAuthenticated: true,
+                  sessionId: sessionId,
+                });
+                console.log("User authenticated with valid token");
+              } else {
+                // Token is expired, clear everything
+                console.log("Token expired, clearing authentication");
+                set({ userId: null, role: null, exp: null, isAuthenticated: false, sessionId: null });
+                localStorage.removeItem("token");
+                localStorage.removeItem("refreshToken");
+                localStorage.removeItem("sessionId");
+                localStorage.removeItem("id");
+              }
             } else {
+              // Invalid token structure
+              console.log("Invalid token structure");
+              set({ userId: null, role: null, exp: null, isAuthenticated: false, sessionId: null });
               localStorage.removeItem("token");
               localStorage.removeItem("refreshToken");
               localStorage.removeItem("sessionId");
+              localStorage.removeItem("id");
             }
           } catch {
+            // JWT decode error
+            console.log("JWT decode error");
+            set({ userId: null, role: null, exp: null, isAuthenticated: false, sessionId: null });
             localStorage.removeItem("token");
             localStorage.removeItem("refreshToken");
             localStorage.removeItem("sessionId");
+            localStorage.removeItem("id");
           }
+        } else {
+          // No token found
+          console.log("No token found");
+          set({ userId: null, role: null, exp: null, isAuthenticated: false, sessionId: null });
         }
       },
 
