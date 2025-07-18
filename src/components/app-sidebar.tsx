@@ -6,6 +6,7 @@ import {
   DollarSign,
   ChevronDown,
   ChevronRight,
+  Shield,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -38,6 +39,7 @@ const navItems: NavItem[] = [
     icon: Users,
     href:'/Roles'
   },
+  { label: 'Sessions', icon: Shield, href: '/sessions' },
   { label: 'Revenue', icon: DollarSign, href: '/Revenue' },
 ];
 

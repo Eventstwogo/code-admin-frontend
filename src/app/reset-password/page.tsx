@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -57,7 +57,7 @@ export default function ResetPasswordWithTokenPage() {
   const confirmPassword = watch("confirm_password");
   // Password requirements
   const requirements = [
-    { label: "At least 6 characters", met: password?.length >= 6 },
+    { label: "At least 8 characters", met: password?.length >= 8 },
     { label: "One uppercase letter", met: /[A-Z]/.test(password) },
     { label: "One lowercase letter", met: /[a-z]/.test(password) },
     { label: "One number", met: /\d/.test(password) },
@@ -65,17 +65,6 @@ export default function ResetPasswordWithTokenPage() {
   ];
   const allMet = requirements.every(r => r.met);
   const passwordsMatch = password === confirmPassword && !!password;
-  // Password strength meter logic
-  const passwordStrength = useMemo(() => {
-    if (!password) return 0;
-    let score = 0;
-    if (password.length >= 6) score++;
-    if (/[A-Z]/.test(password)) score++;
-    if (/[a-z]/.test(password)) score++;
-    if (/\d/.test(password)) score++;
-    if (/[!@#$%^&*]/.test(password)) score++;
-    return score;
-  }, [password]);
 
   const onSubmit = useCallback(async (data: z.infer<typeof resetPasswordSchema>) => {
     if (submitting) return; // Prevent multiple simultaneous requests
