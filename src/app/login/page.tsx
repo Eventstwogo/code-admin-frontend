@@ -86,12 +86,13 @@ export default function LoginPage() {
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response: { status: number; data: any } };
         const { status, data } = axiosError.response;
+        console.log(data)
         if (status === 401) {
-          toast.error(data.detail?.message === "User not found." ? 'User Not Found.' : 'Invalid credentials or account issues.');
+          toast.error(data.message === "User not found." ? 'User Not Found.' : 'Invalid credentials or account issues.');
         } else if (status === 403) {
-          toast.error(data.detail?.message || 'Access forbidden.');
+          toast.error(data.message || 'Access forbidden.');
         } else if (status === 423) {
-          toast.error(data.detail?.message || 'Account locked.');
+          toast.error(data.message || 'Account locked.');
         } else if (status === 404) {
           toast.error('Account not found.');
         } else {

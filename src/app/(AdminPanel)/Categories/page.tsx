@@ -260,7 +260,8 @@ const CategoriesTable = () => {
       const parent = categories.find(
         (cat: { category_id: any; }) => cat.category_id === selectedRow.parentId
       );
-      if (parent && !parent.category_status) {
+      console.log(parent.category_status)
+      if (parent && parent.category_status) {
         toast.error('Cannot activate subcategory while parent is inactive');
         setSwitchOpen(false);
         setSelectedRow(null);
