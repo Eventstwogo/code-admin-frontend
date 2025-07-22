@@ -98,8 +98,8 @@ const BasicInfoPage = () => {
   const { userId } = useStore();
 
   
-  // Check if we're in edit mode
-  const eventId = searchParams.get('edit');
+
+  const eventId = searchParams.get('event_id');
 
   const isEditMode = Boolean(eventId);
   

@@ -247,11 +247,11 @@ const CategoryCreation = () => {
     setValue("name", e.target.value);
     setNameTouched(true);
   }, [setValue]);
-
+console.log(categoryId)
   const onSubmit = useCallback(async (data: CategoryFormData) => {
     if (isSubmitting) return;
-    
-    setIsSubmitting(true);
+      setIsSubmitting(true); // ✅ Add this line
+
     try {
       const formData = new FormData();
 
@@ -267,7 +267,7 @@ const CategoryCreation = () => {
       if (selectedImageFile) {
         formData.append("file", selectedImageFile);
       }
-
+console.log('hello')
       const endpoint = categoryId
         ? `/api/v1/category-items/${categoryId}`
         : "/api/v1/categories/";

@@ -67,7 +67,15 @@ export interface Event {
 }
 
 // Actions cell component
-const ActionsCell = ({ event, onDelete }: { event: Event; onDelete: (id: string) => void }) => {
+const ActionsCell = ({ 
+  event, 
+  onDelete, 
+  onView 
+}: { 
+  event: Event; 
+  onDelete: (id: string) => void;
+  onView: (id: string) => void;
+}) => {
   const router = useRouter()
 
   return (
@@ -86,11 +94,11 @@ const ActionsCell = ({ event, onDelete }: { event: Event; onDelete: (id: string)
           Copy event ID
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => router.push(`/events/${event.event_slug}`)}>
+        <DropdownMenuItem onClick={() => onView(event.event_id)}>
           <Eye className="mr-2 h-4 w-4" />
-          View event
+          View Details
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => router.push(`/CreateEvents/BasicInfo?edit=${event.event_id}`)}>
+        <DropdownMenuItem onClick={() => router.push(`/CreateEvents/BasicInfo?event_id=${event.event_id}`)}>
           <Edit className="mr-2 h-4 w-4" />
           Edit event
         </DropdownMenuItem>
@@ -107,7 +115,10 @@ const ActionsCell = ({ event, onDelete }: { event: Event; onDelete: (id: string)
   )
 }
 
-export const createColumns = (onDelete: (id: string) => void): ColumnDef<Event>[] => [
+export const createColumns = (
+  onDelete: (id: string) => void,
+  onView: (id: string) => void
+): ColumnDef<Event>[] => [
   {
     id: "select",
     header: ({ table }) => (
@@ -323,7 +334,7 @@ export const createColumns = (onDelete: (id: string) => void): ColumnDef<Event>[
     enableHiding: false,
     cell: ({ row }) => {
       const event = row.original
-      return <ActionsCell event={event} onDelete={onDelete} />
+      return <ActionsCell event={event} onDelete={onDelete} onView={onView} />
     },
   },
 ]
