@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState,useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { 
   ArrowLeft, 
   X, 
@@ -45,6 +45,7 @@ interface Step2Data {
 
 const CreateEventDatesPricing = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [eventDates, setEventDates] = useState<EventDate[]>([]);
   const [currency, setCurrency] = useState("USD");
   const [isPublic, setIsPublic] = useState(true);
@@ -53,8 +54,74 @@ const CreateEventDatesPricing = () => {
   const [requireApproval, setRequireApproval] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Get slot_id and event_id from URL parameters
+  const slotId = searchParams.get('slot_id');
+  const eventId = searchParams.get('event_id');
+  
   // Default duration for new time slots
   const [defaultDuration, setDefaultDuration] = useState<number>(120); // Default 2 hours in minutes
+
+  // Load existing slot data when in edit mode
+  const loadSlotData = useCallback(async () => {
+    if (!slotId) return;
+
+    try {
+      console.log('Loading slot data for ID:', slotId);
+      const response = await axiosInstance.get(`/api/v1/slots/get/${slotId}`);
+      const slotData = response.data.data;
+
+      console.log('Loaded slot data:', slotData);
+
+      // Transform API slot data back to component format
+      if (slotData.slot_data) {
+        const transformedDates: EventDate[] = [];
+        
+        Object.entries(slotData.slot_data).forEach(([date, slots]: [string, any]) => {
+          const timeSlots: TimeSlot[] = [];
+          
+          Object.entries(slots).forEach(([slotKey, slotInfo]: [string, any]) => {
+            timeSlots.push({
+              id: Date.now() + Math.random(),
+              startTime: slotInfo.start_time,
+              endTime: slotInfo.end_time,
+              duration: slotInfo.duration,
+              ticketCount: slotInfo.capacity,
+              price: slotInfo.price
+            });
+          });
+
+          transformedDates.push({
+            id: Date.now() + Math.random(),
+            date: date,
+            timeSlots: timeSlots
+          });
+        });
+
+        setEventDates(transformedDates);
+        toast.success("Existing slot data loaded successfully");
+      }
+    } catch (error) {
+      console.error("Error loading slot data:", error);
+      // Don't show error toast as this might be a new event without slots yet
+      console.log("No existing slot data found, starting fresh");
+    }
+  }, [slotId]);
+
+  // Validate URL parameters on component mount
+  useEffect(() => {
+    if (!slotId || !eventId) {
+      toast.error("Missing slot ID or event ID. Please complete Step 1 first.");
+      router.push('/CreateEvents/BasicInfo');
+      return;
+    }
+    
+    console.log('DatesPricing loaded with:');
+    console.log('Event ID:', eventId);
+    console.log('Slot ID:', slotId);
+
+    // Load existing slot data if available
+    loadSlotData();
+  }, [slotId, eventId, router, loadSlotData]);
   
   // Date range selection
   const [startDate, setStartDate] = useState("");
@@ -116,23 +183,7 @@ const CreateEventDatesPricing = () => {
   };
 
   // Check if basic info exists and optionally load duration as default
-  useEffect(() => {
-    const basicInfo = localStorage.getItem('eventBasicInfo');
-    if (!basicInfo) {
-      toast.error("Please complete basic information first");
-      router.push('/CreateEvents/BasicInfo');
-    } else {
-      try {
-        const parsedInfo = JSON.parse(basicInfo);
-        if (parsedInfo.duration) {
-          const durationInMinutes = parseDurationToMinutes(parsedInfo.duration);
-          setDefaultDuration(durationInMinutes);
-        }
-      } catch (error) {
-        console.error("Error parsing basic info:", error);
-      }
-    }
-  }, [router]);
+
 
   // Generate dates between start and end date
   const generateDateRange = () => {
@@ -305,15 +356,41 @@ const CreateEventDatesPricing = () => {
     );
   };
 
-  // Convert base64 back to File
-  const base64ToFile = (base64: string, filename: string, mimeType: string): File => {
-    const byteCharacters = atob(base64.split(',')[1]);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
+
+
+
+
+  // Transform event dates to the required API format
+  const transformEventDatesToApiFormat = () => {
+    if (!slotId) {
+      throw new Error('Slot ID is required');
     }
-    const byteArray = new Uint8Array(byteNumbers);
-    return new File([byteArray], filename, { type: mimeType });
+
+    const slotData: Record<string, Record<string, any>> = {};
+    
+    eventDates.forEach(eventDate => {
+      if (eventDate.date && eventDate.timeSlots.length > 0) {
+        const dateSlots: Record<string, any> = {};
+        
+        eventDate.timeSlots.forEach((slot, index) => {
+          const slotKey = `slot_${index + 1}`;
+          dateSlots[slotKey] = {
+            start_time: slot.startTime,
+            end_time: slot.endTime,
+            duration: slot.duration,
+            capacity: slot.ticketCount,
+            price: parseFloat(slot.price.toString())
+          };
+        });
+        
+        slotData[eventDate.date] = dateSlots;
+      }
+    });
+    
+    return {
+      slot_id: slotId, // Use slot_id from URL parameter
+      slot_data: slotData
+    };
   };
 
   // Handle form submission
@@ -341,7 +418,7 @@ const CreateEventDatesPricing = () => {
     eventDates.forEach(date => {
       date.timeSlots.forEach(slot => {
         if (slot.startTime && !slot.endTime) {
-          slot.endTime = calculateEndTime(slot.startTime, eventDuration);
+          slot.endTime = calculateEndTime(slot.startTime, slot.duration);
         }
       });
     });
@@ -349,86 +426,70 @@ const CreateEventDatesPricing = () => {
     setIsSubmitting(true);
 
     try {
-      // Get basic info and files from localStorage
-      const basicInfoData = JSON.parse(localStorage.getItem('eventBasicInfo') || '{}');
-      const fileData = JSON.parse(localStorage.getItem('eventFiles') || '{}');
+      // Validate that we have the required slot_id
+      if (!slotId) {
+        toast.error("Missing slot ID. Please complete Step 1 first.");
+        return;
+      }
 
-      // Create FormData for file upload
-      const formData = new FormData();
-      
-      // Combine all data with additional details in JSON format
-      const eventDetails = {
-        description: basicInfoData.description,
-        organizer: basicInfoData.organizer,
-        additionalInfo: basicInfoData.additionalInfo,
-        duration: basicInfoData.duration,
-        language: basicInfoData.language,
-        ageRestriction: basicInfoData.ageRestriction,
-        tags: basicInfoData.tags
-      };
+      // Transform event dates to the required API format
+      const apiSlotData = transformEventDatesToApiFormat();
 
-      // Add gallery image info to JSON
-      const galleryInfo = fileData.galleryImages?.map((img: any, index: number) => ({
-        id: img.id,
-        filename: img.name,
-        size: 0, // We don't have size info from base64
-        index: index
-      })) || [];
-
-      const finalEventData = {
-        title: basicInfoData.title,
-        address: basicInfoData.address,
-        category: basicInfoData.category,
-        subcategory: basicInfoData.subcategory,
-        eventDetails: eventDetails,
-        galleryInfo: galleryInfo,
-        eventDates,
+      // Prepare the JSON payload - only slot data and settings
+      const jsonPayload = {
+        // Slot data in the required format
+        slot_id: apiSlotData.slot_id,
+        slot_data: apiSlotData.slot_data,
+        
+  
         currency,
         isPublic,
         isFeatured,
         allowWaitlist,
         requireApproval
       };
+
+      // Debug: Log the payload
+      console.log('Slot data payload being sent:', jsonPayload);
+      console.log('Using Slot ID from URL:', slotId);
+      console.log('Event ID:', eventId);
+
+      // Check if we're updating existing slots or creating new ones
+      let response;
       
-      // Add the combined data as JSON
-      formData.append('eventData', JSON.stringify(finalEventData));
-
-      // Add main image
-      if (fileData.mainImage) {
-        const mainImageFile = base64ToFile(fileData.mainImage.file, fileData.mainImage.name, fileData.mainImage.type);
-        formData.append('image', mainImageFile);
-      }
-
-      // Add banner image
-      if (fileData.bannerImage) {
-        const bannerImageFile = base64ToFile(fileData.bannerImage.file, fileData.bannerImage.name, fileData.bannerImage.type);
-        formData.append('banner', bannerImageFile);
-      }
-
-      // Add gallery images
-      if (fileData.galleryImages) {
-        fileData.galleryImages.forEach((img: any, index: number) => {
-          const galleryImageFile = base64ToFile(img.file, img.name, img.type);
-          formData.append(`gallery_${index}`, galleryImageFile);
+      try {
+        // First try to get existing slot data to determine if we should update or create
+        await axiosInstance.get(`/api/v1/slots/get/${slotId}`);
+        
+        // If we get here, slots exist, so update them
+        response = await axiosInstance.put(`/api/v1/slots/update/${slotId}`, jsonPayload, {
+          headers: {
+            "Content-Type": "application/json",
+          },
         });
+        
+        console.log('Slots updated successfully');
+      } catch (getError) {
+        // If getting slots fails, they don't exist yet, so create them
+        response = await axiosInstance.post("/api/v1/slots/create", jsonPayload, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        
+        console.log('Slots created successfully');
       }
 
-      // Submit to API
-      const response = await axiosInstance.post("/events", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      if (response.status === 201) {
-        toast.success("Event created successfully!");
+      if (response.status === 201 || response.status === 200) {
+        const isUpdate = response.status === 200;
+        toast.success(isUpdate ? "Event slots updated successfully!" : "Event slots created successfully!");
         
         // Clear localStorage
         localStorage.removeItem('eventBasicInfo');
         localStorage.removeItem('eventFiles');
         
         // Redirect to events list or success page
-        router.push("/AdminPanel/Events");
+        router.push("/CreateEvents");
       }
     } catch (error: any) {
       console.error("Error creating event:", error);
@@ -440,6 +501,43 @@ const CreateEventDatesPricing = () => {
 
   const goBackToBasicInfo = () => {
     router.push('/CreateEvents/BasicInfo');
+  };
+
+  // Preview the API data structure (for debugging)
+  const previewApiData = () => {
+    if (!slotId) {
+      toast.error("No slot ID found in URL. Please complete Step 1 first.");
+      return;
+    }
+
+    try {
+      const apiSlotData = transformEventDatesToApiFormat();
+
+      const jsonPayload = {
+        // Slot data in the required format
+        slot_id: apiSlotData.slot_id,
+        slot_data: apiSlotData.slot_data,
+        
+        // Additional settings
+        currency,
+        isPublic,
+        isFeatured,
+        allowWaitlist,
+        requireApproval
+      };
+
+      console.log("=== URL PARAMETERS ===");
+      console.log("Event ID from URL:", eventId);
+      console.log("Slot ID from URL:", slotId);
+      
+      console.log("=== SLOT DATA PAYLOAD ===");
+      console.log("Slot Data Payload:", JSON.stringify(jsonPayload, null, 2));
+      
+      toast.success("Slot data payload logged to console - check browser console");
+    } catch (error) {
+      console.error("Error generating preview:", error);
+      toast.error("Error generating preview. Please check console.");
+    }
   };
 
   return (
@@ -457,10 +555,13 @@ const CreateEventDatesPricing = () => {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Step 2: Dates, Times & Pricing
+            {eventDates.length > 0 ? 'Edit Event: Dates, Times & Pricing' : 'Step 2: Dates, Times & Pricing'}
           </h1>
           <p className="text-gray-600 mb-4">
-            Configure when your event will happen and set pricing for different time slots
+            {eventDates.length > 0 
+              ? 'Update your event schedule and pricing - modify dates, times, and ticket prices'
+              : 'Configure when your event will happen and set pricing for different time slots'
+            }
           </p>
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
             <Calendar className="h-4 w-4 text-blue-600" />
@@ -1059,6 +1160,17 @@ const CreateEventDatesPricing = () => {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Step 1
             </Button>
+            {/* Preview API Data Button (for debugging) */}
+            {eventDates.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={previewApiData}
+                className="px-6 py-3 h-12 border-2 border-blue-300 text-blue-700 hover:bg-blue-50 hover:scale-105 transition-transform"
+              >
+                Preview API Data
+              </Button>
+            )}
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting}

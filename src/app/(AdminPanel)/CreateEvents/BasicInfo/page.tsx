@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -93,9 +93,16 @@ interface GalleryImage {
 
 const BasicInfoPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { userId } = useStore();
-  console.log(userId);
+
+  
+  // Check if we're in edit mode
+  const eventId = searchParams.get('edit');
+
+  const isEditMode = Boolean(eventId);
+  
   // Image states
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [mainImagePreview, setMainImagePreview] = useState<string>("");
@@ -132,6 +139,57 @@ const BasicInfoPage = () => {
   });
 
   const selectedCategory = watch("category");
+console.log(isEditMode)
+  // Load existing event data when in edit mode
+  const loadEventData = useCallback(async () => {
+    if (!isEditMode || !eventId) return;
+
+    try {
+      console.log('Loading event data for ID:', eventId);
+      const response = await axiosInstance.get(`/api/v1/events/${eventId}`);
+      const eventData = response.data.data;
+console.log('Response data:', response.data);
+      console.log('Loaded event data:', eventData);
+
+      // Set form values
+      setValue('title', eventData.event_title || '');
+      setValue('address', eventData.location || '');
+      setValue('category', eventData.category.category_id || '');
+      setValue('subcategory', eventData.subcategory.subcategory_id || '');
+      setValue('description', eventData.extra_data.description || '');
+      setValue('organizer', eventData.organizer.username || '');
+      setValue('duration', eventData.duration || '');
+      setValue('language', eventData.extra_data.language || '');
+      setValue('ageRestriction', eventData.extra_data.ageRestriction || '');
+      setValue('additionalInfo', eventData.extra_data.additional_info || '');
+
+      // Handle tags
+      if (eventData.hash_tags && Array.isArray(eventData.hash_tags)) {
+        setValue('tags', eventData.hash_tags.join(', '));
+      }
+
+      // Set image previews if available
+      if (eventData.card_image) {
+        setMainImagePreview(eventData.card_image);
+      }
+      if (eventData.banner_image) {
+        setBannerImagePreview(eventData.banner_image);
+      }
+      if (eventData.extra_images && Array.isArray(eventData.extra_images)) {
+        const galleryPreviews = eventData.extra_images.map((img: any, index: number) => ({
+          id: Date.now() + index,
+          file: null, // We can't recreate the File object
+          preview: img
+        }));
+        setGalleryImages(galleryPreviews);
+      }
+
+      toast.success("Event data loaded successfully");
+    } catch (error) {
+      console.error("Error loading event data:", error);
+      toast.error("Failed to load event data");
+    }
+  }, [isEditMode, eventId, setValue]);
 
   // Check authentication and fetch categories on component mount
   useEffect(() => {
@@ -152,7 +210,12 @@ const BasicInfoPage = () => {
     };
 
     fetchCategories();
-  }, [userId, router]);
+    
+    // Load event data if in edit mode
+    if (isEditMode) {
+      loadEventData();
+    }
+  }, [userId, router, isEditMode, loadEventData]);
 
   // Update subcategories when category changes
   useEffect(() => {
@@ -277,14 +340,23 @@ const BasicInfoPage = () => {
       return;
     }
 
-    if (!mainImage) {
-      toast.error("Please upload a main event image");
-      return;
-    }
+    // In create mode, images are required. In edit mode, they're optional
+    if (!isEditMode) {
+      if (!mainImage) {
+        toast.error("Please upload a main event image");
+        return;
+      }
 
-    if (!bannerImage) {
-      toast.error("Please upload a banner image");
-      return;
+      if (!bannerImage) {
+        toast.error("Please upload a banner image");
+        return;
+      }
+    } else {
+      // In edit mode, only validate if user is trying to upload new images
+      // If no new images are uploaded, we'll keep the existing ones
+      console.log('Edit mode: Images are optional');
+      console.log('Main image file:', mainImage ? 'New file selected' : 'Using existing image');
+      console.log('Banner image file:', bannerImage ? 'New file selected' : 'Using existing image');
     }
 
     setIsSubmitting(true);
@@ -312,41 +384,80 @@ const BasicInfoPage = () => {
       // Hashtags as JSON string
       formData.append('hash_tags', prepareHashtags(data.tags || ""));
       
-      // Images
-      formData.append('card_image', mainImage);
-      formData.append('banner_image', bannerImage);
+      // Images - only append if new files are selected
+      if (mainImage) {
+        formData.append('card_image', mainImage);
+        console.log('Appending new main image');
+      } else if (isEditMode) {
+        console.log('No new main image - keeping existing');
+      }
       
-      // Extra images (gallery images)
-      if (galleryImages.length > 0) {
-        galleryImages.forEach((galleryImage, index) => {
+      if (bannerImage) {
+        formData.append('banner_image', bannerImage);
+        console.log('Appending new banner image');
+      } else if (isEditMode) {
+        console.log('No new banner image - keeping existing');
+      }
+      
+      // Extra images (gallery images) - only append new files
+      const newGalleryImages = galleryImages.filter(img => img.file !== null);
+      if (newGalleryImages.length > 0) {
+        newGalleryImages.forEach((galleryImage, index) => {
           formData.append('extra_images', galleryImage.file);
         });
+        console.log(`Appending ${newGalleryImages.length} new gallery images`);
+      } else if (isEditMode) {
+        console.log('No new gallery images - keeping existing');
       }
 
-      // Make API call
-      const response = await axiosInstance.post('/api/v1/events/create-with-images', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-console.log(response.status);
-      if (response.status === 201) {
-        // Save event ID and basic info to localStorage for next steps
-        const eventId = response.data.data.event_id;
-        const basicInfoData = {
-          eventId,
-          ...data,
-          mainImage: mainImagePreview,
-          bannerImage: bannerImagePreview,
-          galleryImages: galleryImages.map(img => img.preview),
-        };
-console.log('hello')
-       
+      let response;
+      
+      if (isEditMode && eventId) {
+        // Update existing event
+        response = await axiosInstance.patch(`/api/v1/events/${eventId}/update-with-images`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
         
-        toast.success("Event created successfully! Proceeding to dates and pricing.");
-        router.push('/CreateEvents/DatesPricing');
+        console.log('Update response:', response);
+        
+        if (response.status === 200) {
+          console.log('Event updated successfully!');
+          toast.success("Event updated successfully! Proceeding to dates and pricing.");
+            const newSlotId = response.data.data.slot_id; // Get slot_id from API response
+          
+          // Use existing slot_id for edit mode
+          router.push(`/CreateEvents/DatesPricing?slot_id=${newSlotId}&event_id=${eventId}`);
+        } else {
+          toast.error(response.data.message || "Failed to update event");
+        }
       } else {
-        toast.error(response.data.message || "Failed to create event");
+        // Create new event
+        response = await axiosInstance.post('/api/v1/events/create-with-images', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        
+        console.log('Create response:', response);
+        
+        if (response.status === 201) {
+          // Get event ID and slot_id from API response
+          const newEventId = response.data.data.event_id;
+          const newSlotId = response.data.data.slot_id; // Get slot_id from API response
+          
+          console.log('Event created successfully!');
+          console.log('Event ID:', newEventId);
+          console.log('Slot ID:', newSlotId);
+          
+          toast.success("Event created successfully! Proceeding to dates and pricing.");
+          
+          // Pass slot_id via URL query parameter
+          router.push(`/CreateEvents/DatesPricing?slot_id=${newSlotId}&event_id=${newEventId}`);
+        } else {
+          toast.error(response.data.message || "Failed to create event");
+        }
       }
     } catch (error: any) {
       console.error("Error creating event:", error);
@@ -394,10 +505,13 @@ console.log('hello')
             </div>
           </div>
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Step 1: Basic Event Information
+            {isEditMode ? 'Edit Event: Basic Information' : 'Step 1: Basic Event Information'}
           </h1>
           <p className="text-gray-600">
-            Tell us about your event - the details that will help people discover and understand what you're offering
+            {isEditMode 
+              ? 'Update your event details - modify the information that helps people discover and understand your event'
+              : 'Tell us about your event - the details that will help people discover and understand what you\'re offering'
+            }
           </p>
         </div>
 
@@ -691,8 +805,12 @@ console.log('hello')
                   {/* Main Event Image - spans 2 columns on xl */}
                   <div className="xl:col-span-2 space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium text-gray-700">Main Event Image *</Label>
-                      <span className="text-xs text-gray-500">Required • Max 5MB</span>
+                      <Label className="text-sm font-medium text-gray-700">
+                        Main Event Image {!isEditMode ? '*' : ''}
+                      </Label>
+                      <span className="text-xs text-gray-500">
+                        {isEditMode ? 'Optional • Max 5MB' : 'Required • Max 5MB'}
+                      </span>
                     </div>
                     
                     {mainImagePreview ? (
@@ -704,6 +822,11 @@ console.log('hello')
                             fill
                             className="object-cover"
                           />
+                          {isEditMode && !mainImage && (
+                            <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+                              Current Image
+                            </div>
+                          )}
                         </div>
                         <Button
                           type="button"
@@ -714,6 +837,13 @@ console.log('hello')
                         >
                           <X className="h-4 w-4" />
                         </Button>
+                        {isEditMode && !mainImage && (
+                          <div className="absolute bottom-2 left-2 right-2">
+                            <div className="bg-black/50 text-white px-2 py-1 rounded text-xs text-center">
+                              Upload a new image to replace this one
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-gray-400 transition-colors">
@@ -736,8 +866,12 @@ console.log('hello')
                   {/* Banner Image */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium text-gray-700">Banner Image *</Label>
-                      <span className="text-xs text-gray-500">Required • Max 5MB</span>
+                      <Label className="text-sm font-medium text-gray-700">
+                        Banner Image {!isEditMode ? '*' : ''}
+                      </Label>
+                      <span className="text-xs text-gray-500">
+                        {isEditMode ? 'Optional • Max 5MB' : 'Required • Max 5MB'}
+                      </span>
                     </div>
                     
                     {bannerImagePreview ? (
@@ -749,6 +883,11 @@ console.log('hello')
                             fill
                             className="object-cover"
                           />
+                          {isEditMode && !bannerImage && (
+                            <div className="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded text-xs font-medium">
+                              Current Image
+                            </div>
+                          )}
                         </div>
                         <Button
                           type="button"
@@ -759,6 +898,13 @@ console.log('hello')
                         >
                           <X className="h-4 w-4" />
                         </Button>
+                        {isEditMode && !bannerImage && (
+                          <div className="absolute bottom-2 left-2 right-2">
+                            <div className="bg-black/50 text-white px-2 py-1 rounded text-xs text-center">
+                              Upload a new image to replace this one
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">

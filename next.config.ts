@@ -10,6 +10,18 @@ const nextConfig: NextConfig = {
       },
       
     ],
+    domains: [
+      'upload.wikimedia.org',
+      'i.guim.co.uk',
+      'cdn.pixabay.com',
+      'wonderla.com',
+      'images.unsplash.com',
+      'plus.unsplash.com',
+      'www.shutterstock.com',
+       "assets.monica.im",
+       "encrypted-tbn0.gstatic.com"
+
+    ],
   },
   // Performance optimizations
   experimental: {
