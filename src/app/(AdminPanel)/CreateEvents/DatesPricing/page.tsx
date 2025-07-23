@@ -242,11 +242,7 @@ const CreateEventDatesPricing = () => {
       formData.append('end_date', endDate);
       
       // Add location if provided
-      if (eventLocation) {
-        formData.append('location', eventLocation);
-      } else {
-        formData.append('location', '');
-      }
+  
       
       // Add is_online boolean
       formData.append('is_online', isOnlineEvent.toString());
@@ -673,7 +669,7 @@ const CreateEventDatesPricing = () => {
               <div className="border-t pt-4 mt-4">
                 <h3 className="text-lg font-medium text-gray-800 mb-4">Event Details (Optional)</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700">Event Location</Label>
                     <Input
                       type="text"
@@ -685,7 +681,7 @@ const CreateEventDatesPricing = () => {
                     <p className="text-xs text-gray-500">
                       Leave empty if location will be provided later
                     </p>
-                  </div>
+                  </div> */}
                   
                   <div className="space-y-2">
                     <Label className="text-sm font-medium text-gray-700">Event Type</Label>

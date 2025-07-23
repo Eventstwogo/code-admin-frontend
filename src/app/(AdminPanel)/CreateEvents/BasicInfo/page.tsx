@@ -153,15 +153,15 @@ console.log('Response data:', response.data);
 
       // Set form values
       setValue('title', eventData.event_title || '');
-      setValue('address', eventData.location || '');
+      setValue('address', eventData.extra_data.address || '');
       setValue('category', eventData.category.category_id || '');
       setValue('description', eventData.extra_data.description || '');
-      setValue('organizer', eventData.organizer.username || '');
-      setValue('duration', eventData.duration || '');
+      setValue('organizer', eventData.extra_data.oragnizer || '');
+      setValue('duration', eventData.extra_data.duration || '');
       setValue('language', eventData.extra_data.language || '');
       setValue('ageRestriction', eventData.extra_data.ageRestriction || '');
-      setValue('additionalInfo', eventData.extra_data.additional_info || '');
-      setValue('subcategory', eventData.subcategory?.subcategory_id || '');
+      setValue('additionalInfo', eventData.extra_data.additionalInfo || '');
+      
       
 
       // Handle tags
@@ -176,15 +176,15 @@ console.log('Response data:', response.data);
       if (eventData.banner_image) {
         setBannerImagePreview(eventData.banner_image);
       }
-      if (eventData.extra_images && Array.isArray(eventData.extra_images)) {
-        const galleryPreviews = eventData.extra_images.map((img: any, index: number) => ({
+      if (eventData.event_extra_images && Array.isArray(eventData.event_extra_images)) {
+        const galleryPreviews = eventData.event_extra_images.map((img: any, index: number) => ({
           id: Date.now() + index,
           file: null, // We can't recreate the File object
           preview: img
         }));
         setGalleryImages(galleryPreviews);
       }
-
+      setValue('subcategory', eventData.subcategory?.subcategory_id || '');
       toast.success("Event data loaded successfully");
     } catch (error) {
       console.error("Error loading event data:", error);
@@ -194,11 +194,11 @@ console.log('Response data:', response.data);
 
   // Check authentication and fetch categories on component mount
   useEffect(() => {
-    if (!userId) {
-      toast.error("Please log in to create events");
-      router.push('/');
-      return;
-    }
+    // if (!userId) {
+    //   toast.error("Please log in to create events");
+    //   router.push('/');
+    //   return;
+    // }
 
     const fetchCategories = async () => {
       try {

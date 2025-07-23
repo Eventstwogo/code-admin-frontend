@@ -68,7 +68,7 @@ axiosInstance.interceptors.response.use(
         sessionStorage.removeItem('refreshToken');
         sessionStorage.removeItem('sessionId');
         sessionStorage.removeItem('id');
-        window.location.href = '/'; // Redirect to login
+        // window.location.href = '/'; // Redirect to login
         return Promise.reject(refreshError);
       }
     }
