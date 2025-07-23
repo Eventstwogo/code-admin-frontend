@@ -429,7 +429,7 @@ console.log('Response data:', response.data);
             const newSlotId = response.data.data.slot_id; // Get slot_id from API response
           
           // Use existing slot_id for edit mode
-          router.push(`/CreateEvents/DatesPricing?slot_id=${newSlotId}&event_id=${eventId}`);
+          router.push(`/Events/DatesPricing?slot_id=${newSlotId}&event_id=${eventId}`);
         } else {
           toast.error(response.data.message || "Failed to update event");
         }
@@ -455,7 +455,7 @@ console.log('Response data:', response.data);
           toast.success("Event created successfully! Proceeding to dates and pricing.");
           
           // Pass slot_id via URL query parameter
-          router.push(`/CreateEvents/DatesPricing?slot_id=${newSlotId}&event_id=${newEventId}`);
+          router.push(`/Events/DatesPricing?slot_id=${newSlotId}&event_id=${newEventId}`);
         } else {
           toast.error(response.data.message || "Failed to create event");
         }

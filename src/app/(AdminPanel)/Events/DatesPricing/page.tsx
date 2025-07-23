@@ -114,7 +114,7 @@ const CreateEventDatesPricing = () => {
   useEffect(() => {
     if (!slotId || !eventId) {
       toast.error("Missing slot ID or event ID. Please complete Step 1 first.");
-      router.push('/CreateEvents/BasicInfo');
+      router.push('/Events/BasicInfo');
       return;
     }
     
@@ -541,7 +541,7 @@ const CreateEventDatesPricing = () => {
         localStorage.removeItem('eventFiles');
         
         // Redirect to events list or success page
-        router.push("/CreateEvents");
+        router.push("/Events");
       }
     } catch (error: any) {
       console.error("Error creating event:", error);
@@ -552,7 +552,7 @@ const CreateEventDatesPricing = () => {
   };
 
   const goBackToBasicInfo = () => {
-    router.push('/CreateEvents/BasicInfo');
+    router.push('/Events/BasicInfo');
   };
 
   // Preview the API data structure (for debugging)
