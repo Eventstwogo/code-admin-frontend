@@ -14,7 +14,9 @@ import {
   Eye, 
   Image as ImageIcon,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Edit,
+  FileText
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -74,6 +76,8 @@ const CategoryCreation = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const categoryId = searchParams.get("id");
+  const mode = searchParams.get("mode") || "edit"; // Default to edit mode
+  const isViewMode = mode === "view";
 
   const [categories, setCategories] = useState([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -189,6 +193,24 @@ const CategoryCreation = () => {
     router.push("/Categories");
   }, [router]);
 
+  const handleCancel = useCallback(() => {
+    if (categoryId && mode === "edit") {
+      // If we're editing an existing category, go back to view mode
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("mode", "view");
+      router.push(`/Categories/AddCategory?${params.toString()}`);
+    } else {
+      // If we're creating a new category, go back to categories list
+      router.push("/Categories");
+    }
+  }, [categoryId, mode, router, searchParams]);
+
+  const handleEditMode = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("mode", "edit");
+    router.push(`/Categories/AddCategory?${params.toString()}`);
+  }, [router, searchParams]);
+
   const fetchCategories = useCallback(async () => {
     try {
       const response = await axiosInstance.get("/api/v1/categories/?status_filter=false");
@@ -244,13 +266,19 @@ const CategoryCreation = () => {
   }, [categoryId, fetchCategories, fetchCategory]);
 
   const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setValue("name", e.target.value);
-    setNameTouched(true);
-  }, [setValue]);
-console.log(categoryId)
+    if (!isViewMode) {
+      setValue("name", e.target.value);
+      setNameTouched(true);
+    }
+  }, [setValue, isViewMode]);
+
   const onSubmit = useCallback(async (data: CategoryFormData) => {
-    if (isSubmitting) return;
-      setIsSubmitting(true); // ✅ Add this line
+    // Prevent API calls in view mode
+    if (isSubmitting || isViewMode) {
+      return;
+    }
+    
+    setIsSubmitting(true);
 
     try {
       const formData = new FormData();
@@ -267,7 +295,7 @@ console.log(categoryId)
       if (selectedImageFile) {
         formData.append("file", selectedImageFile);
       }
-console.log('hello')
+
       const endpoint = categoryId
         ? `/api/v1/category-items/${categoryId}`
         : "/api/v1/categories/";
@@ -292,7 +320,7 @@ console.log('hello')
     } finally {
       setIsSubmitting(false);
     }
-  }, [isSubmitting, selectedImageFile, categoryId, router]);
+  }, [isSubmitting, selectedImageFile, categoryId, router, isViewMode]);
 
   // Define feature options as a tuple with explicit name values
   const featureOptions = React.useMemo(() => [
@@ -326,48 +354,95 @@ console.log('hello')
               <div className="hidden sm:block w-px h-8 bg-border/60" />
               <div>
                 <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                  {categoryId ? "Edit Category" : "Create New Category"}
+                  {isViewMode 
+                    ? "View Category" 
+                    : categoryId 
+                      ? "Edit Category" 
+                      : "Create New Category"
+                  }
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {categoryId ? "Update category information and settings" : "Add a new category to organize your content"}
+                  {isViewMode 
+                    ? "View category information and settings" 
+                    : categoryId 
+                      ? "Update category information and settings" 
+                      : "Add a new category to organize your content"
+                  }
                 </p>
               </div>
             </div>
             
             <div className="flex gap-3">
-              <Button
-                type="submit"
-                form="category-form"
-                disabled={isSubmitting}
-                className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 min-w-[140px]"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    {categoryId ? "Updating..." : "Saving..."}
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    {categoryId ? "Update Category" : "Save Category"}
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleBack}
-                disabled={isSubmitting}
-                className="hover:bg-accent/80 hover:scale-105 transition-all duration-200 border-border/60 shadow-sm"
-              >
-                Cancel
-              </Button>
+              {isViewMode ? (
+                <>
+                  <Button
+                    onClick={handleEditMode}
+                    className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 min-w-[140px]"
+                  >
+                    <Edit className="h-4 w-4" />
+                    Edit Category
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleBack}
+                    className="hover:bg-accent/80 hover:scale-105 transition-all duration-200 border-border/60 shadow-sm"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to List
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="submit"
+                    form="category-form"
+                    disabled={isSubmitting || isViewMode}
+                    onClick={(e) => {
+                      if (isViewMode) {
+                        e.preventDefault();
+                        return false;
+                      }
+                    }}
+                    className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 min-w-[140px]"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        {categoryId ? "Updating..." : "Saving..."}
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4" />
+                        {categoryId ? "Update Category" : "Save Category"}
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleCancel}
+                    disabled={isSubmitting}
+                    className="hover:bg-accent/80 hover:scale-105 transition-all duration-200 border-border/60 shadow-sm"
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
 
+        {isViewMode && (
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
+              <Eye className="h-4 w-4" />
+              <span className="text-sm font-medium">View Mode - All fields are read-only</span>
+            </div>
+          </div>
+        )}
+
         <form
           id="category-form"
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={isViewMode ? (e) => e.preventDefault() : handleSubmit(onSubmit)}
           className="grid grid-cols-1 lg:grid-cols-2 gap-8"
         >
           {/* Enhanced Upload Image Card */}
@@ -377,24 +452,26 @@ console.log('hello')
                 <div className="p-2 bg-primary/10 rounded-lg">
                   <ImageIcon className="h-5 w-5 text-primary" />
                 </div>
-                Upload Image
+                {isViewMode ? "Category Image" : "Upload Image"}
               </CardTitle>
               <CardDescription className="text-muted-foreground/80">
-                Upload a category image (Max 5MB, JPG/PNG/GIF)
+                {isViewMode ? "Category image" : "Upload a category image (Max 5MB, JPG/PNG/GIF)"}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <div
                 className={cn(
                   "border-2 border-dashed rounded-xl p-8 text-center relative transition-all duration-300 group",
-                  dragActive
-                    ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 scale-[1.02] shadow-lg"
-                    : "border-border/60 hover:border-primary/60 hover:bg-gradient-to-br hover:from-accent/20 hover:to-primary/5 hover:scale-[1.01] hover:shadow-md"
+                  isViewMode 
+                    ? "border-border/40 bg-muted/20" 
+                    : dragActive
+                      ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 scale-[1.02] shadow-lg"
+                      : "border-border/60 hover:border-primary/60 hover:bg-gradient-to-br hover:from-accent/20 hover:to-primary/5 hover:scale-[1.01] hover:shadow-md"
                 )}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
+                onDragEnter={!isViewMode ? handleDrag : undefined}
+                onDragLeave={!isViewMode ? handleDrag : undefined}
+                onDragOver={!isViewMode ? handleDrag : undefined}
+                onDrop={!isViewMode ? handleDrop : undefined}
               >
                 {imagePreview && (
                   <div className="relative group">
@@ -408,44 +485,50 @@ console.log('hello')
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     </div>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={handleImageRemove}
-                      className="absolute -top-2 -right-2 h-8 w-8 p-0 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 bg-destructive/90 hover:bg-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    {!isViewMode && (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleImageRemove}
+                        className="absolute -top-2 -right-2 h-8 w-8 p-0 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 bg-destructive/90 hover:bg-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 )}
                 {imagePreview === null && (
                   <div className="space-y-6">
                     <div className="relative">
-                      <Upload className="mx-auto h-16 w-16 text-muted-foreground/60 group-hover:text-primary/80 transition-colors duration-300" />
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-300" />
+                      <ImageIcon className="mx-auto h-16 w-16 text-muted-foreground/60 transition-colors duration-300" />
+                      {!isViewMode && <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-full blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-300" />}
                     </div>
                     <div className="space-y-4">
                       <p className="text-sm text-muted-foreground/80 font-medium">
-                        Drag and drop your image here, or
+                        {isViewMode ? "No image uploaded" : "Drag and drop your image here, or"}
                       </p>
-                      <Label
-                        htmlFor="image-upload"
-                        className="inline-flex items-center gap-2 cursor-pointer px-6 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-lg hover:from-primary/90 hover:to-primary/80 transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg font-medium"
-                      >
-                        <Upload className="h-4 w-4" />
-                        Browse Files
-                      </Label>
-                      <Input
-                        id="image-upload"
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleImageChange}
-                      />
-                      <p className="text-xs text-muted-foreground/60 mt-2">
-                        Supported formats: JPG, PNG, GIF • Max size: 5MB
-                      </p>
+                      {!isViewMode && (
+                        <>
+                          <Label
+                            htmlFor="image-upload"
+                            className="inline-flex items-center gap-2 cursor-pointer px-6 py-3 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground rounded-lg hover:from-primary/90 hover:to-primary/80 transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg font-medium"
+                          >
+                            <Upload className="h-4 w-4" />
+                            Browse Files
+                          </Label>
+                          <Input
+                            id="image-upload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImageChange}
+                          />
+                          <p className="text-xs text-muted-foreground/60 mt-2">
+                            Supported formats: JPG, PNG, GIF • Max size: 5MB
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
@@ -458,12 +541,16 @@ console.log('hello')
             <CardHeader className="pb-6 bg-gradient-to-r from-accent/5 to-primary/5 rounded-t-lg">
               <CardTitle className="flex items-center gap-3 text-foreground text-lg font-semibold">
                 <div className="p-2 bg-accent/10 rounded-lg">
-                  <CheckCircle2 className="h-5 w-5 text-accent-foreground" />
+                  {isViewMode ? (
+                    <FileText className="h-5 w-5 text-accent-foreground" />
+                  ) : (
+                    <CheckCircle2 className="h-5 w-5 text-accent-foreground" />
+                  )}
                 </div>
                 Category Details
               </CardTitle>
               <CardDescription className="text-muted-foreground/80">
-                Basic information about the category
+                {isViewMode ? "View category information" : "Basic information about the category"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8 p-6">
@@ -478,9 +565,11 @@ console.log('hello')
                     type="text"
                     {...register("name")}
                     placeholder="Enter category name"
+                    disabled={isViewMode}
                     className={cn(
                       "form-field-animate bg-background/50 border-border/60 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200 hover:border-primary/40 pl-4 pr-4 py-3 text-foreground placeholder:text-muted-foreground/60",
-                      errors.name && "border-destructive/60 focus:border-destructive focus:ring-destructive/20"
+                      errors.name && "border-destructive/60 focus:border-destructive focus:ring-destructive/20",
+                      isViewMode && "bg-background border-border/40 text-foreground cursor-default"
                     )}
                     onChange={handleNameChange}
                   />
@@ -508,7 +597,10 @@ console.log('hello')
                     {...register("slug")}
                     placeholder="Auto-generated from name"
                     disabled
-                    className="bg-muted/30 text-muted-foreground border-border/40 pl-4 pr-4 py-3 cursor-not-allowed"
+                    className={cn(
+                      "border-border/40 pl-4 pr-4 py-3 cursor-not-allowed",
+                      isViewMode ? "bg-background text-foreground" : "bg-muted/30 text-muted-foreground"
+                    )}
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground/60 bg-muted/50 px-2 py-1 rounded">
                     AUTO
@@ -535,9 +627,11 @@ console.log('hello')
                     {...register("description")}
                     rows={4}
                     placeholder="Enter category description..."
+                    disabled={isViewMode}
                     className={cn(
                       "resize-none form-field-animate bg-background/50 border-border/60 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200 hover:border-primary/40 p-4 text-foreground placeholder:text-muted-foreground/60",
-                      errors.description && "border-destructive/60 focus:border-destructive focus:ring-destructive/20"
+                      errors.description && "border-destructive/60 focus:border-destructive focus:ring-destructive/20",
+                      isViewMode && "bg-background border-border/40 text-foreground cursor-default"
                     )}
                     maxLength={500}
                   />
@@ -559,8 +653,11 @@ console.log('hello')
                   name="parent"
                   control={control}
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger className="w-full bg-background/50 border-border/60 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200 hover:border-primary/40 h-12 px-4">
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isViewMode}>
+                      <SelectTrigger className={cn(
+                        "w-full bg-background/50 border-border/60 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200 hover:border-primary/40 h-12 px-4",
+                        isViewMode && "bg-background border-border/40 text-foreground cursor-default"
+                      )}>
                         <SelectValue placeholder="Select parent category (optional)" />
                       </SelectTrigger>
                       <SelectContent className="bg-popover border-border/60 shadow-xl">
@@ -596,7 +693,7 @@ console.log('hello')
                 Features
               </CardTitle>
               <CardDescription className="text-muted-foreground/80">
-                Configure category display options
+                {isViewMode ? "Category display settings" : "Configure category display options"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-6">
@@ -620,7 +717,11 @@ console.log('hello')
                             id={feature.key}
                             checked={!!field.value}
                             onCheckedChange={field.onChange}
-                            className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-muted/60 transition-all duration-200 hover:scale-105"
+                            disabled={isViewMode}
+                            className={cn(
+                              "data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-muted/60 transition-all duration-200 hover:scale-105",
+                              isViewMode && "cursor-default opacity-80"
+                            )}
                           />
                         </div>
                       )}
@@ -641,7 +742,7 @@ console.log('hello')
                 SEO Optimization
               </CardTitle>
               <CardDescription className="text-muted-foreground/80">
-                Improve search engine visibility
+                {isViewMode ? "Search engine optimization settings" : "Improve search engine visibility"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-8 p-6">
@@ -661,9 +762,11 @@ console.log('hello')
                     type="text"
                     {...register("metaTitle")}
                     placeholder="SEO title (recommended: 50-60 characters)"
+                    disabled={isViewMode}
                     className={cn(
                       "bg-background/50 border-border/60 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200 hover:border-primary/40 pl-4 pr-4 py-3 text-foreground placeholder:text-muted-foreground/60",
-                      errors.metaTitle && "border-destructive/60 focus:border-destructive focus:ring-destructive/20"
+                      errors.metaTitle && "border-destructive/60 focus:border-destructive focus:ring-destructive/20",
+                      isViewMode && "bg-background border-border/40 text-foreground cursor-default"
                     )}
                     maxLength={70}
                   />
@@ -700,9 +803,11 @@ console.log('hello')
                     {...register("metaDescription")}
                     rows={3}
                     placeholder="SEO description (recommended: 150-160 characters)"
+                    disabled={isViewMode}
                     className={cn(
                       "resize-none bg-background/50 border-border/60 focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all duration-200 hover:border-primary/40 p-4 text-foreground placeholder:text-muted-foreground/60",
-                      errors.metaDescription && "border-destructive/60 focus:border-destructive focus:ring-destructive/20"
+                      errors.metaDescription && "border-destructive/60 focus:border-destructive focus:ring-destructive/20",
+                      isViewMode && "bg-background border-border/40 text-foreground cursor-default"
                     )}
                     maxLength={160}
                   />

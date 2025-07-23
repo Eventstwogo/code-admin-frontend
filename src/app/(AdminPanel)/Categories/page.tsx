@@ -240,7 +240,11 @@ const CategoriesTable = () => {
   }, []);
 
   const handleEditClick = useCallback((id: string) => {
-    router.push(`/Categories/AddCategory?id=${id}`);
+    router.push(`/Categories/AddCategory?id=${id}&mode=edit`);
+  }, [router]);
+
+  const handleViewClick = useCallback((id: string) => {
+    router.push(`/Categories/AddCategory?id=${id}&mode=view`);
   }, [router]);
 
   const handleDialogCancel = useCallback(() => {
@@ -408,6 +412,14 @@ const CategoriesTable = () => {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => handleViewClick(row.original.id)}
+            className="hover:bg-accent hover:text-accent-foreground"
+          >
+            View
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => handleEditClick(row.original.id)}
             disabled={row.original.status === 'inactive'}
             className="hover:bg-accent hover:text-accent-foreground"
@@ -417,7 +429,7 @@ const CategoriesTable = () => {
         </div>
       ),
     },
-  ], [expandedRows, normalizedData, toggleRow, handleSwitchChange, handleEditClick]);
+  ], [expandedRows, normalizedData, toggleRow, handleSwitchChange, handleEditClick, handleViewClick]);
 
   const tableConfig = React.useMemo(() => ({
     data,

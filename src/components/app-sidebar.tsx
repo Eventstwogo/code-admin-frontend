@@ -204,6 +204,9 @@ import {
   ChevronRight,
   Plus,
   Calendar,
+  CalendarDays,
+  Tags,
+  LineChart,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -225,14 +228,14 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/Dashboard' },
-  { label: 'Create Event', icon: Plus, href: '/CreateEvents' },
+  { label: 'Events', icon: CalendarDays, href: '/Events' },
   { label: 'Users', icon: Users, href: '/Users' },
   {
     label: 'Categories',
-    icon: Calendar,
+    icon: Tags,
     href:'/Categories'
   },
-  { label: 'Revenue', icon: DollarSign, href: '/Revenue' },
+  { label: 'Revenue', icon: LineChart, href: '/Revenue' },
 ];
 
 export default function AppSidebar({

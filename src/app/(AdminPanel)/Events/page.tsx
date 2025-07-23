@@ -191,7 +191,7 @@ const CreateEventPage = () => {
 
   const handleEditFromModal = () => {
     if (eventData) {
-      router.push(`/CreateEvents/BasicInfo?event_id=${eventData.event_id}&slot_id=${eventData.slot_id}`);
+      router.push(`/Events/BasicInfo?event_id=${eventData.event_id}&slot_id=${eventData.slot_id}`);
       setViewModalOpen(false);
     }
   };
@@ -283,7 +283,7 @@ const CreateEventPage = () => {
               {loading ? "Loading..." : "Refresh"}
             </Button>
             <Button
-              onClick={() => router.push('/CreateEvents/BasicInfo')}
+              onClick={() => router.push('/Events/BasicInfo')}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-6 py-3 h-12 shadow-lg hover:shadow-xl transition-all duration-200"
             >
               <Plus className="h-5 w-5 mr-2" />
@@ -354,7 +354,7 @@ const CreateEventPage = () => {
                 You haven't created any events yet. Create your first event to get started!
               </p>
               <Button
-                onClick={() => router.push('/CreateEvents/BasicInfo')}
+                onClick={() => router.push('/Events/BasicInfo')}
                 className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
