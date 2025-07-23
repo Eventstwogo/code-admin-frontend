@@ -155,13 +155,14 @@ console.log('Response data:', response.data);
       setValue('title', eventData.event_title || '');
       setValue('address', eventData.location || '');
       setValue('category', eventData.category.category_id || '');
-      setValue('subcategory', eventData.subcategory.subcategory_id || '');
       setValue('description', eventData.extra_data.description || '');
       setValue('organizer', eventData.organizer.username || '');
       setValue('duration', eventData.duration || '');
       setValue('language', eventData.extra_data.language || '');
       setValue('ageRestriction', eventData.extra_data.ageRestriction || '');
       setValue('additionalInfo', eventData.extra_data.additional_info || '');
+      setValue('subcategory', eventData.subcategory?.subcategory_id || '');
+      
 
       // Handle tags
       if (eventData.hash_tags && Array.isArray(eventData.hash_tags)) {

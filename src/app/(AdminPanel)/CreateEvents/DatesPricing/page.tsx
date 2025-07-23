@@ -15,7 +15,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import axiosInstance from "@/lib/axiosInstance";
+import useStore from "@/lib/Zustand";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +48,7 @@ interface Step2Data {
 const CreateEventDatesPricing = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { userId } = useStore();
   const [eventDates, setEventDates] = useState<EventDate[]>([]);
   const [currency, setCurrency] = useState("USD");
   const [isPublic, setIsPublic] = useState(true);
@@ -127,6 +130,10 @@ const CreateEventDatesPricing = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   
+  // Event details for API
+  const [eventLocation, setEventLocation] = useState("");
+  const [isOnlineEvent, setIsOnlineEvent] = useState(false);
+  
   // Bulk time slot creation
   const [showBulkSlots, setShowBulkSlots] = useState(false);
   const [bulkStartTime, setBulkStartTime] = useState("");
@@ -186,7 +193,7 @@ const CreateEventDatesPricing = () => {
 
 
   // Generate dates between start and end date
-  const generateDateRange = () => {
+  const generateDateRange = async () => {
     if (!startDate || !endDate) {
       toast.error("Please select both start and end dates");
       return;
@@ -194,6 +201,11 @@ const CreateEventDatesPricing = () => {
 
     if (new Date(startDate) > new Date(endDate)) {
       toast.error("Start date cannot be after end date");
+      return;
+    }
+
+    if (!eventId || !userId) {
+      toast.error("Missing required information (Event ID or User ID)");
       return;
     }
 
@@ -222,10 +234,54 @@ const CreateEventDatesPricing = () => {
       return;
     }
 
-    setEventDates(prev => [...prev, ...dates]);
-    setStartDate("");
-    setEndDate("");
-    toast.success(`Added ${dates.length} date(s) successfully`);
+    try {
+      // Call the API to update event details
+      const formData = new FormData();
+      formData.append('user_id', userId);
+      formData.append('start_date', startDate);
+      formData.append('end_date', endDate);
+      
+      // Add location if provided
+      if (eventLocation) {
+        formData.append('location', eventLocation);
+      } else {
+        formData.append('location', '');
+      }
+      
+      // Add is_online boolean
+      formData.append('is_online', isOnlineEvent.toString());
+
+      const response = await axiosInstance.patch(
+        `/api/v1/events/${eventId}/update-event-details`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      );
+
+      if (response.data.statusCode === 200) {
+        // Update local state only after successful API call
+        setEventDates(prev => [...prev, ...dates]);
+        setStartDate("");
+        setEndDate("");
+        toast.success(`Added ${dates.length} date(s) and updated event details successfully!`);
+      } else {
+        toast.error(response.data.message || "Failed to update event details");
+      }
+    } catch (error: any) {
+      console.error("Error updating event details:", error);
+      if (error.response?.status === 404) {
+        toast.error("Event not found");
+      } else if (error.response?.status === 401) {
+        toast.error("Authentication required");
+      } else if (error.response?.status === 403) {
+        toast.error("You don't have permission to update this event");
+      } else {
+        toast.error("Failed to update event details. Please try again.");
+      }
+    }
   };
 
   // Add single date
@@ -611,6 +667,42 @@ const CreateEventDatesPricing = () => {
                 >
                   Add Date Range
                 </Button>
+              </div>
+              
+              {/* Event Details Section */}
+              <div className="border-t pt-4 mt-4">
+                <h3 className="text-lg font-medium text-gray-800 mb-4">Event Details (Optional)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">Event Location</Label>
+                    <Input
+                      type="text"
+                      placeholder="Enter event location (e.g., Conference Hall A, 123 Main St)"
+                      value={eventLocation}
+                      onChange={(e) => setEventLocation(e.target.value)}
+                      className="h-11 border-2 border-gray-200 focus:border-purple-500"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Leave empty if location will be provided later
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-700">Event Type</Label>
+                    <div className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg">
+                      <div>
+                        <p className="font-medium text-gray-800">Online Event</p>
+                        <p className="text-sm text-gray-500">
+                          {isOnlineEvent ? "This event will be held online" : "This event will be held in-person"}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={isOnlineEvent}
+                        onCheckedChange={setIsOnlineEvent}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <div className="text-center">

@@ -140,10 +140,7 @@ const CreateEventPage = () => {
         toast.error("Events endpoint not found. Please check the API.");
       } else if (error.code === 'ECONNABORTED') {
         toast.error("Request timeout. Please check your connection.");
-      } else if (error.response?.status === 401) {
-        toast.error("Authentication required. Please log in again.");
-        router.push('/');
-      } else if (error.response?.status === 500) {
+      }  else if (error.response?.status === 500) {
         toast.error("Server error. Please try again later.");
       } else {
         toast.error("Failed to fetch events. Please try again.");
@@ -253,11 +250,7 @@ const CreateEventPage = () => {
   const columns = useMemo(() => createColumns(handleDeleteEvent, handleViewEvent), [handleDeleteEvent, handleViewEvent]);
 
   useEffect(() => {
-    if (!isAuthenticated || !userId) {
-      toast.error("Please log in to view events");
-      router.push('/');
-      return;
-    }
+   
     
     fetchEvents();
   }, [userId, isAuthenticated, router, fetchEvents]);
