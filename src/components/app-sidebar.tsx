@@ -235,7 +235,7 @@ const navItems: NavItem[] = [
     icon: Tags,
     href:'/Categories'
   },
-  { label: 'Revenue', icon: LineChart, href: '/Revenue' },
+  // { label: 'Revenue', icon: LineChart, href: '/Revenue' },
 ];
 
 export default function AppSidebar({
