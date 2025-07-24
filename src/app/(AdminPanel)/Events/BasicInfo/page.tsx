@@ -16,7 +16,10 @@ import {
   FileText,
   Camera,
   Tag as TagIcon,
-  ArrowRight
+  ArrowRight,
+  Loader2,
+  Info,
+  Badge
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,6 +33,12 @@ import { cn } from "@/lib/utils";
 import Image from 'next/image';
 import slugify from "slugify";
 import useStore from "@/lib/Zustand";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+// Constants
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_GALLERY_IMAGES = 5;
+const ACCEPTED_IMAGE_TYPES = "image/jpeg,image/jpg,image/png,image/webp";
 
 // Basic Info Schema
 const basicInfoSchema = z.object({
@@ -52,7 +61,7 @@ const basicInfoSchema = z.object({
     .min(10, "Description must be at least 10 characters"),
   organizer: z
     .string()
-    .min(3, "Organizer details must be at least 3 characters"),
+    .min(3, "Event organizer details must be at least 3 characters"),
   duration: z
     .string()
     .optional(),
@@ -87,21 +96,24 @@ interface Subcategory {
 
 interface GalleryImage {
   id: string;
-  file: File;
+  file: File | null;
   preview: string;
+  isExisting?: boolean;
 }
 
 const BasicInfoPage = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { userId } = useStore();
 
-  
-
+  // URL parameters
   const eventId = searchParams.get('event_id');
-
   const isEditMode = Boolean(eventId);
+
+  // Loading states
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingEventData, setIsLoadingEventData] = useState(false);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   
   // Image states
   const [mainImage, setMainImage] = useState<File | null>(null);
@@ -139,30 +151,92 @@ const BasicInfoPage = () => {
   });
 
   const selectedCategory = watch("category");
-console.log(isEditMode)
-  // Load existing event data when in edit mode
+  const watchedTags = watch("tags");
+
+  // Format tags for preview
+  const formattedTags = React.useMemo(() => {
+    if (!watchedTags || watchedTags.trim() === "") return [];
+    
+    return watchedTags
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag.length > 0)
+      .map(tag => tag.startsWith('#') ? tag : `#${tag}`);
+  }, [watchedTags]);
+
+  // Utility Functions
+  const generateEventSlug = (title: string): string => {
+    return slugify(title, { 
+      lower: true, 
+      strict: true,
+      remove: /[*+~.()'"!:@]/g 
+    });
+  };
+
+  const prepareExtraData = (data: BasicInfoFormData) => {
+    return JSON.stringify({
+      description: data.description,
+      organizer: data.organizer,
+      address: data.address,
+      duration: data.duration || "",
+      language: data.language || "",
+      ageRestriction: data.ageRestriction || "",
+      additionalInfo: data.additionalInfo || ""
+    });
+  };
+
+  const prepareHashtags = (tags: string) => {
+    if (!tags || tags.trim() === "") return JSON.stringify([]);
+    
+    const tagArray = tags
+      .split(',')
+      .map(tag => tag.trim())
+      .filter(tag => tag.length > 0)
+      .map(tag => tag.startsWith('#') ? tag : `#${tag}`);
+    
+    return JSON.stringify(tagArray);
+  };
+
+  const validateImageFile = (file: File): boolean => {
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(`${file.name} is too large. Maximum size is 5MB`);
+      return false;
+    }
+    return true;
+  };
+  // Data Loading Functions
+  const fetchCategories = useCallback(async () => {
+    setIsLoadingCategories(true);
+    try {
+      const response = await axiosInstance.get("/api/v1/categories/list");
+      setCategories(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      toast.error("Failed to load categories");
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  }, []);
+
   const loadEventData = useCallback(async () => {
     if (!isEditMode || !eventId) return;
 
+    setIsLoadingEventData(true);
     try {
-      console.log('Loading event data for ID:', eventId);
       const response = await axiosInstance.get(`/api/v1/events/${eventId}`);
       const eventData = response.data.data;
-console.log('Response data:', response.data);
-      console.log('Loaded event data:', eventData);
 
       // Set form values
       setValue('title', eventData.event_title || '');
-      setValue('address', eventData.extra_data.address || '');
-      setValue('category', eventData.category.category_id || '');
-      setValue('description', eventData.extra_data.description || '');
-      setValue('organizer', eventData.extra_data.oragnizer || '');
-      setValue('duration', eventData.extra_data.duration || '');
-      setValue('language', eventData.extra_data.language || '');
-      setValue('ageRestriction', eventData.extra_data.ageRestriction || '');
-      setValue('additionalInfo', eventData.extra_data.additionalInfo || '');
-      
-      
+      setValue('address', eventData.extra_data?.address || '');
+      setValue('category', eventData.category?.category_id || '');
+      setValue('description', eventData.extra_data?.description || '');
+      setValue('organizer', eventData.extra_data?.organizer || ''); // Fixed typo
+      setValue('duration', eventData.extra_data?.duration || '');
+      setValue('language', eventData.extra_data?.language || '');
+      setValue('ageRestriction', eventData.extra_data?.ageRestriction || '');
+      setValue('additionalInfo', eventData.extra_data?.additionalInfo || '');
+      setValue('subcategory', eventData.subcategory?.subcategory_id || '');
 
       // Handle tags
       if (eventData.hash_tags && Array.isArray(eventData.hash_tags)) {
@@ -177,46 +251,98 @@ console.log('Response data:', response.data);
         setBannerImagePreview(eventData.banner_image);
       }
       if (eventData.event_extra_images && Array.isArray(eventData.event_extra_images)) {
-        const galleryPreviews = eventData.event_extra_images.map((img: any, index: number) => ({
-          id: Date.now() + index,
-          file: null, // We can't recreate the File object
-          preview: img
+        const galleryPreviews = eventData.event_extra_images.map((img: string, index: number) => ({
+          id: `existing-${Date.now()}-${index}`,
+          file: null,
+          preview: img,
+          isExisting: true
         }));
         setGalleryImages(galleryPreviews);
       }
-      setValue('subcategory', eventData.subcategory?.subcategory_id || '');
+
       toast.success("Event data loaded successfully");
     } catch (error) {
       console.error("Error loading event data:", error);
       toast.error("Failed to load event data");
+    } finally {
+      setIsLoadingEventData(false);
     }
   }, [isEditMode, eventId, setValue]);
 
-  // Check authentication and fetch categories on component mount
-  useEffect(() => {
-    // if (!userId) {
-    //   toast.error("Please log in to create events");
-    //   router.push('/');
-    //   return;
-    // }
+  // Image Handling Functions
+  const handleMainImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && validateImageFile(file)) {
+      setMainImage(file);
+      const reader = new FileReader();
+      reader.onload = () => setMainImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }, []);
 
-    const fetchCategories = async () => {
-      try {
-        const response = await axiosInstance.get("/api/v1/categories/list");
-        setCategories(response.data.data || []);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-        toast.error("Failed to load categories");
-      }
-    };
+  const handleBannerImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && validateImageFile(file)) {
+      setBannerImage(file);
+      const reader = new FileReader();
+      reader.onload = () => setBannerImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  }, []);
+
+  const handleGalleryImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    if (galleryImages.length + files.length > MAX_GALLERY_IMAGES) {
+      toast.error(`Maximum ${MAX_GALLERY_IMAGES} gallery images allowed`);
+      return;
+    }
+
+    files.forEach(file => {
+      if (!validateImageFile(file)) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const newImage: GalleryImage = {
+          id: `new-${Date.now()}-${Math.random()}`,
+          file,
+          preview: reader.result as string,
+          isExisting: false
+        };
+        setGalleryImages(prev => [...prev, newImage]);
+      };
+      reader.readAsDataURL(file);
+    });
+  }, [galleryImages.length]);
+
+  const removeGalleryImage = useCallback((id: string) => {
+    setGalleryImages(prev => prev.filter(img => img.id !== id));
+  }, []);
+
+  const removeMainImage = useCallback(() => {
+    setMainImage(null);
+    setMainImagePreview("");
+  }, []);
+
+  const removeBannerImage = useCallback(() => {
+    setBannerImage(null);
+    setBannerImagePreview("");
+  }, []);
+
+  // Effects
+  useEffect(() => {
+    if (!userId) {
+      toast.error("Please log in to create events");
+      router.push('/');
+      return;
+    }
 
     fetchCategories();
     
-    // Load event data if in edit mode
     if (isEditMode) {
       loadEventData();
     }
-  }, [userId, router, isEditMode, loadEventData]);
+  }, [userId, router, isEditMode, loadEventData, fetchCategories]);
 
   // Update subcategories when category changes
   useEffect(() => {
@@ -229,141 +355,28 @@ console.log('Response data:', response.data);
     }
   }, [selectedCategory, categories, setValue]);
 
-  // Image handling functions
-  const handleMainImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image size should be less than 5MB");
-        return;
-      }
-      setMainImage(file);
-      const reader = new FileReader();
-      reader.onload = () => setMainImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  }, []);
-
-  const handleBannerImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image size should be less than 5MB");
-        return;
-      }
-      setBannerImage(file);
-      const reader = new FileReader();
-      reader.onload = () => setBannerImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  }, []);
-
-  const handleGalleryImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    
-    if (galleryImages.length + files.length > 5) {
-      toast.error("Maximum 5 gallery images allowed");
-      return;
-    }
-
-    files.forEach(file => {
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error(`${file.name} is too large. Maximum size is 5MB`);
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        const newImage: GalleryImage = {
-          id: Date.now().toString() + Math.random(),
-          file,
-          preview: reader.result as string
-        };
-        setGalleryImages(prev => [...prev, newImage]);
-      };
-      reader.readAsDataURL(file);
-    });
-  }, [galleryImages.length]);
-
-  const removeGalleryImage = useCallback((id: string) => {
-    setGalleryImages(prev => prev.filter(img => img.id !== id));
-  }, []);
-
-  const removeMainImage = () => {
-    setMainImage(null);
-    setMainImagePreview("");
-  };
-
-  const removeBannerImage = () => {
-    setBannerImage(null);
-    setBannerImagePreview("");
-  };
-
-  // Utility function to generate event slug
-  const generateEventSlug = (title: string): string => {
-    return slugify(title, { 
-      lower: true, 
-      strict: true,
-      remove: /[*+~.()'"!:@]/g 
-    });
-  };
-
-  // Utility function to prepare extra_data JSON
-  const prepareExtraData = (data: BasicInfoFormData) => {
-    return JSON.stringify({
-      description: data.description,
-      organizer: data.organizer,
-      address: data.address,
-      duration: data.duration || "",
-      language: data.language || "",
-      ageRestriction: data.ageRestriction || "",
-      additionalInfo: data.additionalInfo || ""
-    });
-  };
-
-  // Utility function to prepare hashtags JSON
-  const prepareHashtags = (tags: string) => {
-    if (!tags || tags.trim() === "") return JSON.stringify([]);
-    
-    const tagArray = tags
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0)
-      .map(tag => tag.startsWith('#') ? tag : `#${tag}`);
-    
-    return JSON.stringify(tagArray);
-  };
-
-  // Form submission
+  // Form Submission
   const onSubmit = async (data: BasicInfoFormData) => {
     if (!userId) {
       toast.error("User not authenticated. Please log in again.");
       return;
     }
 
-    // In create mode, images are required. In edit mode, they're optional
+    // Validate images for create mode
     if (!isEditMode) {
       if (!mainImage) {
         toast.error("Please upload a main event image");
         return;
       }
-
       if (!bannerImage) {
         toast.error("Please upload a banner image");
         return;
       }
-    } else {
-      // In edit mode, only validate if user is trying to upload new images
-      // If no new images are uploaded, we'll keep the existing ones
-      console.log('Edit mode: Images are optional');
-      console.log('Main image file:', mainImage ? 'New file selected' : 'Using existing image');
-      console.log('Banner image file:', bannerImage ? 'New file selected' : 'Using existing image');
     }
 
     setIsSubmitting(true);
 
     try {
-      // Prepare FormData for the API
       const formData = new FormData();
       
       // Required fields
@@ -373,11 +386,7 @@ console.log('Response data:', response.data);
       formData.append('category_id', data.category);
       
       // Optional subcategory
-      if (data.subcategory && data.subcategory.trim() !== "") {
-        formData.append('subcategory_id', data.subcategory);
-      } else {
-        formData.append('subcategory_id', '');
-      }
+      formData.append('subcategory_id', data.subcategory?.trim() || '');
       
       // Extra data as JSON string
       formData.append('extra_data', prepareExtraData(data));
@@ -388,28 +397,19 @@ console.log('Response data:', response.data);
       // Images - only append if new files are selected
       if (mainImage) {
         formData.append('card_image', mainImage);
-        console.log('Appending new main image');
-      } else if (isEditMode) {
-        console.log('No new main image - keeping existing');
       }
       
       if (bannerImage) {
         formData.append('banner_image', bannerImage);
-        console.log('Appending new banner image');
-      } else if (isEditMode) {
-        console.log('No new banner image - keeping existing');
       }
       
       // Extra images (gallery images) - only append new files
       const newGalleryImages = galleryImages.filter(img => img.file !== null);
-      if (newGalleryImages.length > 0) {
-        newGalleryImages.forEach((galleryImage, index) => {
+      newGalleryImages.forEach((galleryImage) => {
+        if (galleryImage.file) {
           formData.append('extra_images', galleryImage.file);
-        });
-        console.log(`Appending ${newGalleryImages.length} new gallery images`);
-      } else if (isEditMode) {
-        console.log('No new gallery images - keeping existing');
-      }
+        }
+      });
 
       let response;
       
@@ -421,14 +421,9 @@ console.log('Response data:', response.data);
           },
         });
         
-        console.log('Update response:', response);
-        
         if (response.status === 200) {
-          console.log('Event updated successfully!');
           toast.success("Event updated successfully! Proceeding to dates and pricing.");
-            const newSlotId = response.data.data.slot_id; // Get slot_id from API response
-          
-          // Use existing slot_id for edit mode
+          const newSlotId = response.data.data.slot_id;
           router.push(`/Events/DatesPricing?slot_id=${newSlotId}&event_id=${eventId}`);
         } else {
           toast.error(response.data.message || "Failed to update event");
@@ -441,38 +436,28 @@ console.log('Response data:', response.data);
           },
         });
         
-        console.log('Create response:', response);
-        
         if (response.status === 201) {
-          // Get event ID and slot_id from API response
           const newEventId = response.data.data.event_id;
-          const newSlotId = response.data.data.slot_id; // Get slot_id from API response
-          
-          console.log('Event created successfully!');
-          console.log('Event ID:', newEventId);
-          console.log('Slot ID:', newSlotId);
+          const newSlotId = response.data.data.slot_id;
           
           toast.success("Event created successfully! Proceeding to dates and pricing.");
-          
-          // Pass slot_id via URL query parameter
           router.push(`/Events/DatesPricing?slot_id=${newSlotId}&event_id=${newEventId}`);
         } else {
           toast.error(response.data.message || "Failed to create event");
         }
       }
     } catch (error: any) {
-      console.error("Error creating event:", error);
+      console.error("Error processing event:", error);
       
       if (error.response?.data?.message) {
         toast.error(error.response.data.message);
       } else if (error.response?.data?.errors) {
-        // Handle validation errors
         const errors = error.response.data.errors;
         Object.keys(errors).forEach(key => {
           toast.error(`${key}: ${errors[key][0]}`);
         });
       } else {
-        toast.error("Failed to create event. Please try again.");
+        toast.error(`Failed to ${isEditMode ? 'update' : 'create'} event. Please try again.`);
       }
     } finally {
       setIsSubmitting(false);
@@ -493,22 +478,22 @@ console.log('Response data:', response.data);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-4 mb-4">
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4">
             <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
               1
             </div>
-            <div className="h-1 w-16 bg-gray-300 rounded"></div>
+            <div className="h-1 w-8 sm:w-16 bg-gray-300 rounded"></div>
             <div className="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 font-bold text-sm">
               2
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 px-4">
             {isEditMode ? 'Edit Event: Basic Information' : 'Step 1: Basic Event Information'}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 text-sm sm:text-base px-4 max-w-2xl mx-auto">
             {isEditMode 
               ? 'Update your event details - modify the information that helps people discover and understand your event'
               : 'Tell us about your event - the details that will help people discover and understand what you\'re offering'
@@ -516,7 +501,31 @@ console.log('Response data:', response.data);
           </p>
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8" noValidate>
+          {/* Form Validation Summary */}
+          {Object.keys(errors).length > 0 && (
+            <div className="max-w-7xl mx-auto">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-red-400 mt-0.5 mr-3 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-medium text-red-800 mb-2">
+                      Please fix the following errors:
+                    </h3>
+                    <ul className="text-sm text-red-700 space-y-1">
+                      {Object.entries(errors).map(([field, error]) => (
+                        <li key={field} className="flex items-center">
+                          <span className="w-2 h-2 bg-red-400 rounded-full mr-2 flex-shrink-0"></span>
+                          <span className="capitalize">{field.replace(/([A-Z])/g, ' $1').trim()}</span>: {error?.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="max-w-7xl mx-auto space-y-8">
             {/* Core Information Section */}
             <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
@@ -686,11 +695,11 @@ console.log('Response data:', response.data);
                   {/* Organizer Information */}
                   <div className="space-y-2">
                     <Label htmlFor="organizer" className="text-sm font-medium text-gray-700">
-                      Organizer Name *
+                      Event Organizer Details *
                     </Label>
                     <Textarea
                       id="organizer"
-                      placeholder="Who is organizing this event? Include contact details, organization name, website, etc."
+                      placeholder="Organization name, contact person, phone number, email, website, social media handles, etc."
                       rows={4}
                       {...register("organizer")}
                       className={cn(
@@ -706,6 +715,9 @@ console.log('Response data:', response.data);
                         {errors.organizer.message}
                       </p>
                     )}
+                    <p className="text-xs text-gray-500">
+                      Include organization name, contact details, and any relevant information about the organizer
+                    </p>
                   </div>
 
                   {/* Additional Information */}
@@ -774,16 +786,28 @@ console.log('Response data:', response.data);
 
                       {/* Tags */}
                       <div className="space-y-2">
-                        <Label htmlFor="tags" className="text-sm font-medium text-gray-700">
-                          Tags / Keywords
-                        </Label>
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="tags" className="text-sm font-medium text-gray-700">
+                            Tags / Keywords
+                          </Label>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <Info className="h-4 w-4 text-gray-400" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Separate tags with commas. Example: music, festival, outdoor</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                         <Input
                           id="tags"
-                          placeholder="e.g., music, festival"
+                          placeholder="e.g., music, festival, outdoor"
                           {...register("tags")}
                           className="h-12 border-2 border-gray-200 focus:border-blue-500 hover:border-gray-300 transition-all duration-200"
                         />
-                        <p className="text-xs text-gray-500">Comma-separated tags</p>
+                        <p className="text-xs text-gray-500">Comma-separated keywords to help people find your event</p>
                       </div>
                     </div>
                   </div>
@@ -803,11 +827,11 @@ console.log('Response data:', response.data);
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
-                  {/* Main Event Image - spans 2 columns on xl */}
-                  <div className="xl:col-span-2 space-y-4">
+                  {/* Card Image (Main Event Image) */}
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm font-medium text-gray-700">
-                        Main Event Image {!isEditMode ? '*' : ''}
+                        Card Image {!isEditMode ? '*' : ''}
                       </Label>
                       <span className="text-xs text-gray-500">
                         {isEditMode ? 'Optional • Max 5MB' : 'Required • Max 5MB'}
@@ -816,10 +840,10 @@ console.log('Response data:', response.data);
                     
                     {mainImagePreview ? (
                       <div className="relative group">
-                        <div className="relative h-64 w-full rounded-lg overflow-hidden border-2 border-gray-200">
+                        <div className="relative h-48 w-full rounded-lg overflow-hidden border-2 border-gray-200">
                           <Image
                             src={mainImagePreview}
-                            alt="Main event image"
+                            alt="Card image"
                             fill
                             className="object-cover"
                           />
@@ -847,25 +871,36 @@ console.log('Response data:', response.data);
                         )}
                       </div>
                     ) : (
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-gray-400 transition-colors">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors group">
                         <input
                           type="file"
-                          accept="image/*"
+                          accept={ACCEPTED_IMAGE_TYPES}
                           onChange={handleMainImageChange}
                           className="hidden"
                           id="main-image-upload"
+                          aria-describedby="main-image-help"
                         />
-                        <label htmlFor="main-image-upload" className="cursor-pointer">
-                          <ImageIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                          <p className="text-lg text-gray-600 mb-2">Click to upload main event image</p>
-                          <p className="text-sm text-gray-500">PNG, JPG up to 5MB</p>
+                        <label htmlFor="main-image-upload" className="cursor-pointer block">
+                          <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4 group-hover:text-gray-500 transition-colors" />
+                          <p className="text-sm text-gray-600 mb-2 group-hover:text-gray-700 transition-colors">
+                            Upload card image
+                          </p>
+                          <p id="main-image-help" className="text-xs text-gray-500">
+                            Square/Portrait format • Recommended: 400x600px
+                          </p>
                         </label>
                       </div>
                     )}
+
+                    {/* Card Image Tip */}
+                    <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
+                      <p className="text-xs text-gray-500 mb-1">Card Image Tip:</p>
+                      <p className="text-xs text-gray-400">This image appears on event cards and listings. Use portrait or square format for best results.</p>
+                    </div>
                   </div>
 
-                  {/* Banner Image */}
-                  <div className="space-y-4">
+                  {/* Banner Image - spans 2 columns on xl */}
+                  <div className="xl:col-span-2 space-y-4">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm font-medium text-gray-700">
                         Banner Image {!isEditMode ? '*' : ''}
@@ -877,7 +912,7 @@ console.log('Response data:', response.data);
                     
                     {bannerImagePreview ? (
                       <div className="relative group">
-                        <div className="relative h-32 w-full rounded-lg overflow-hidden border-2 border-gray-200">
+                        <div className="relative h-40 w-full rounded-lg overflow-hidden border-2 border-gray-200">
                           <Image
                             src={bannerImagePreview}
                             alt="Banner image"
@@ -908,34 +943,39 @@ console.log('Response data:', response.data);
                         )}
                       </div>
                     ) : (
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-gray-400 transition-colors group">
                         <input
                           type="file"
-                          accept="image/*"
+                          accept={ACCEPTED_IMAGE_TYPES}
                           onChange={handleBannerImageChange}
                           className="hidden"
                           id="banner-image-upload"
+                          aria-describedby="banner-image-help"
                         />
-                        <label htmlFor="banner-image-upload" className="cursor-pointer">
-                          <ImageIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                          <p className="text-sm text-gray-600 mb-2">Upload banner image</p>
-                          <p className="text-xs text-gray-500">Wide format recommended</p>
+                        <label htmlFor="banner-image-upload" className="cursor-pointer block">
+                          <ImageIcon className="h-16 w-16 text-gray-400 mx-auto mb-4 group-hover:text-gray-500 transition-colors" />
+                          <p className="text-lg text-gray-600 mb-2 group-hover:text-gray-700 transition-colors">
+                            Click to upload banner image
+                          </p>
+                          <p id="banner-image-help" className="text-sm text-gray-500">
+                            Wide format • Recommended: 1920x540px or 1200x400px
+                          </p>
                         </label>
                       </div>
                     )}
 
-                    {/* Additional upload area for banner if needed */}
-                    <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 text-center">
-                      <p className="text-xs text-gray-500 mb-2">Banner Tip:</p>
-                      <p className="text-xs text-gray-400">Use 1920x1080 or similar wide aspect ratio for best results</p>
+                    {/* Banner Image Tip */}
+                    <div className="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center">
+                      <p className="text-xs text-gray-500 mb-1">Banner Image Tip:</p>
+                      <p className="text-xs text-gray-400">This wide image appears at the top of your event page. Use landscape format with 16:9 or 3:1 aspect ratio.</p>
                     </div>
                   </div>
 
                   {/* Gallery Images - spans full width */}
-                  <div className="lg:col-span-2 xl:col-span-3 space-y-6">
+                  <div className="xl:col-span-3 space-y-6">
                     <div className="flex items-center justify-between">
                       <Label className="text-lg font-medium text-gray-700">
-                        Gallery Images ({galleryImages.length}/5)
+                        Gallery Images ({galleryImages.length}/{MAX_GALLERY_IMAGES})
                       </Label>
                       <span className="text-sm text-gray-500">Optional • Max 5MB each</span>
                     </div>
@@ -947,10 +987,20 @@ console.log('Response data:', response.data);
                           <div className="relative h-24 w-full rounded-lg overflow-hidden border-2 border-gray-200">
                             <Image
                               src={image.preview}
-                              alt="Gallery image"
+                              alt={`Gallery image ${image.isExisting ? '(existing)' : '(new)'}`}
                               fill
                               className="object-cover"
                             />
+                            {image.isExisting && (
+                              <div className="absolute top-1 left-1 bg-blue-500 text-white px-1 py-0.5 rounded text-xs font-medium">
+                                Current
+                              </div>
+                            )}
+                            {!image.isExisting && (
+                              <div className="absolute top-1 left-1 bg-green-500 text-white px-1 py-0.5 rounded text-xs font-medium">
+                                New
+                              </div>
+                            )}
                           </div>
                           <Button
                             type="button"
@@ -958,6 +1008,7 @@ console.log('Response data:', response.data);
                             size="icon"
                             className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={() => removeGalleryImage(image.id)}
+                            aria-label={`Remove ${image.isExisting ? 'existing' : 'new'} gallery image`}
                           >
                             <X className="h-3 w-3" />
                           </Button>
@@ -965,21 +1016,22 @@ console.log('Response data:', response.data);
                       ))}
 
                       {/* Add Gallery Image Button */}
-                      {galleryImages.length < 5 && (
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors">
+                      {galleryImages.length < MAX_GALLERY_IMAGES && (
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-400 transition-colors group">
                           <input
                             type="file"
-                            accept="image/*"
+                            accept={ACCEPTED_IMAGE_TYPES}
                             multiple
                             onChange={handleGalleryImageChange}
                             className="hidden"
                             id="gallery-images-upload"
+                            aria-describedby="gallery-help"
                           />
-                          <label htmlFor="gallery-images-upload" className="cursor-pointer">
-                            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                            <p className="text-xs text-gray-600">Add Images</p>
-                            <p className="text-xs text-gray-500">
-                              {5 - galleryImages.length} more
+                          <label htmlFor="gallery-images-upload" className="cursor-pointer block">
+                            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2 group-hover:text-gray-500 transition-colors" />
+                            <p className="text-xs text-gray-600 group-hover:text-gray-700 transition-colors">Add Images</p>
+                            <p id="gallery-help" className="text-xs text-gray-500">
+                              {MAX_GALLERY_IMAGES - galleryImages.length} more • Multiple files OK
                             </p>
                           </label>
                         </div>
@@ -988,24 +1040,28 @@ console.log('Response data:', response.data);
 
                     {/* Empty State */}
                     {galleryImages.length === 0 && (
-                      <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-lg">
+                      <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
                         <ImageIcon className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                         <p className="text-lg text-gray-600 mb-2">No gallery images uploaded yet</p>
-                        <p className="text-sm text-gray-500 mb-4">Upload images to showcase your event</p>
+                        <p className="text-sm text-gray-500 mb-4">Upload images to showcase your event (optional)</p>
                         <input
                           type="file"
-                          accept="image/*"
+                          accept={ACCEPTED_IMAGE_TYPES}
                           multiple
                           onChange={handleGalleryImageChange}
                           className="hidden"
                           id="gallery-images-upload-empty"
+                          aria-describedby="gallery-empty-help"
                         />
                         <label htmlFor="gallery-images-upload-empty">
-                          <Button type="button" variant="outline" className="cursor-pointer">
+                          <Button type="button" variant="outline" className="cursor-pointer hover:bg-gray-50">
                             <Upload className="h-4 w-4 mr-2" />
                             Upload Gallery Images
                           </Button>
                         </label>
+                        <p id="gallery-empty-help" className="text-xs text-gray-400 mt-2">
+                          You can upload up to {MAX_GALLERY_IMAGES} images • JPEG, PNG, WebP • Max 5MB each
+                        </p>
                       </div>
                     )}
                   </div>
@@ -1015,35 +1071,61 @@ console.log('Response data:', response.data);
           </div>
 
           {/* Submit Section */}
-          <div className="flex justify-center gap-4 pt-8">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 pt-8">
             <Button
               type="button"
               variant="outline"
               onClick={() => router.push('/Dashboard')}
-              className="px-8 py-3 h-12 border-2 hover:scale-105 transition-transform"
+              disabled={isSubmitting}
+              className="px-8 py-3 h-12 border-2 hover:scale-105 transition-transform disabled:hover:scale-100 disabled:opacity-50"
+              aria-label="Cancel and return to dashboard"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-8 py-3 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 hover:scale-105 transition-transform"
-            >
-              {isSubmitting ? (
-                <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Saving...
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Save className="h-4 w-4" />
-                  Save & Continue
-                  <ArrowRight className="h-4 w-4" />
-                </div>
-              )}
-            </Button>
+            
+            {isLoadingEventData ? (
+              <Button
+                disabled
+                className="px-8 py-3 h-12 bg-gray-400 text-white border-0"
+              >
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Loading Event Data...
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                disabled={isSubmitting || isLoadingCategories}
+                className="px-8 py-3 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white border-0 hover:scale-105 transition-transform disabled:hover:scale-100 disabled:opacity-50"
+                aria-label={isEditMode ? "Update event and continue to dates and pricing" : "Create event and continue to dates and pricing"}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {isEditMode ? 'Updating...' : 'Creating...'}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Save className="h-4 w-4" />
+                    {isEditMode ? 'Update & Continue' : 'Save & Continue'}
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                )}
+              </Button>
+            )}
           </div>
+
+          {/* Form Progress Indicator */}
+          {isSubmitting && (
+            <div className="mt-4 text-center">
+              <p className="text-sm text-gray-600">
+                {isEditMode ? 'Updating your event...' : 'Creating your event...'}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Please don't close this page while we process your request.
+              </p>
+            </div>
+          )}
         </form>
       </div>
     </div>

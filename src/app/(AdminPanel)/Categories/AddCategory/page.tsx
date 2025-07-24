@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import slugify from "slugify";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
@@ -31,13 +31,48 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Image from 'next/image';
 
+// Constants
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+const MAX_DESCRIPTION_LENGTH = 500;
+const MAX_META_TITLE_LENGTH = 70;
+const MAX_META_DESCRIPTION_LENGTH = 160;
+
+// Types
+interface Category {
+  category_id: string;
+  category_name: string;
+  category_slug: string;
+  category_description: string;
+  category_meta_title: string;
+  category_meta_description: string;
+  category_img_thumbnail: string;
+  featured_category: boolean;
+  show_in_menu: boolean;
+  subcategory_name?: string;
+  subcategory_slug?: string;
+  subcategory_description?: string;
+  subcategory_meta_title?: string;
+  subcategory_meta_description?: string;
+  subcategory_img_thumbnail?: string;
+  featured_subcategory?: boolean;
+}
+
+interface ApiResponse<T> {
+  statusCode: number;
+  message: string;
+  data: T;
+}
+
+type ViewMode = "view" | "edit" | "create";
+
 // Zod Schema
 const categorySchema = z.object({
   name: z
     .string()
     .min(3, "Category name must be at least 3 characters")
     .max(50, "Category name must not exceed 50 characters")
-    .regex(/^[A-Za-z\s-]+$/, "Only letters,  spaces, and hyphens allowed")
+    .regex(/^[A-Za-z\s-]+$/, "Only letters, spaces, and hyphens allowed")
     .refine((val) => val.trim().length > 0, {
       message: "Category name cannot be just spaces",
     }),
@@ -49,17 +84,17 @@ const categorySchema = z.object({
     }),
   description: z
     .string()
-    .max(500, "Description must be less than 500 characters")
+    .max(MAX_DESCRIPTION_LENGTH, `Description must be less than ${MAX_DESCRIPTION_LENGTH} characters`)
     .optional()
     .or(z.literal("")),
   metaTitle: z
     .string()
-    .max(70, "Meta title must be less than 70 characters")
+    .max(MAX_META_TITLE_LENGTH, `Meta title must be less than ${MAX_META_TITLE_LENGTH} characters`)
     .optional()
     .or(z.literal("")),
   metaDescription: z
     .string()
-    .max(160, "Meta description must be less than 160 characters")
+    .max(MAX_META_DESCRIPTION_LENGTH, `Meta description must be less than ${MAX_META_DESCRIPTION_LENGTH} characters`)
     .optional()
     .or(z.literal("")),
   parent: z.string().optional(),
@@ -72,29 +107,106 @@ const categorySchema = z.object({
 
 type CategoryFormData = z.infer<typeof categorySchema>;
 
+// Custom hooks
+const useImageUpload = (isViewMode: boolean) => {
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+
+  const validateImage = useCallback((file: File): string | null => {
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      return 'Please select a valid image file (JPG, PNG, GIF)';
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      return `Image size should be less than ${MAX_IMAGE_SIZE / (1024 * 1024)}MB`;
+    }
+    return null;
+  }, []);
+
+  const processImageFile = useCallback((file: File) => {
+    const error = validateImage(file);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+
+    setSelectedImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }, [validateImage]);
+
+  const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processImageFile(file);
+    }
+  }, [processImageFile]);
+
+  const handleImageRemove = useCallback(() => {
+    setImagePreview(null);
+    setSelectedImageFile(null);
+    const fileInput = document.getElementById('image-upload') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
+  }, []);
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isViewMode) return;
+    
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, [isViewMode]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    
+    if (isViewMode) return;
+    
+    const files = e.dataTransfer.files;
+    if (files && files[0]) {
+      processImageFile(files[0]);
+    }
+  }, [isViewMode, processImageFile]);
+
+  return {
+    imagePreview,
+    selectedImageFile,
+    dragActive,
+    handleImageChange,
+    handleImageRemove,
+    handleDrag,
+    handleDrop,
+    setImagePreview,
+  };
+};
+
 const CategoryCreation = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const categoryId = searchParams.get("id");
-  const mode = searchParams.get("mode") || "edit"; // Default to edit mode
+  const mode = (searchParams.get("mode") || (categoryId ? "view" : "create")) as ViewMode;
   const isViewMode = mode === "view";
 
-  const [categories, setCategories] = useState([]);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  // State
+  const [categories, setCategories] = useState<Category[]>([]);
   const [nameTouched, setNameTouched] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    control,
-    formState: { errors },
-  } = useForm<CategoryFormData>({
+  // Custom hooks
+  const imageUpload = useImageUpload(isViewMode);
+
+  // Form setup
+  const form = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: "",
@@ -111,96 +223,27 @@ const CategoryCreation = () => {
     },
   });
 
+  const { register, handleSubmit, watch, setValue, control, formState: { errors } } = form;
   const name = watch("name");
 
-  // Auto-generate slug *only* if user has touched name
+  // Auto-generate slug when name changes
   useEffect(() => {
-    if (nameTouched) {
-      setValue("slug", slugify(name || "", { lower: true, strict: true }));
+    if (nameTouched && name) {
+      setValue("slug", slugify(name, { lower: true, strict: true }));
     }
   }, [name, nameTouched, setValue]);
 
-  const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select a valid image file');
-        return;
-      }
-      
-      // Validate file size (5MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error('Image size should be less than 10MB');
-        return;
-      }
-      
-      setSelectedImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  }, []);
-
-  const handleImageRemove = useCallback(() => {
-    setImagePreview(null);
-    setSelectedImageFile(null);
-    // Reset file input
-    const fileInput = document.getElementById('image-upload') as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
-  }, []);
-
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    const files = e.dataTransfer.files;
-    if (files && files[0]) {
-      const file = files[0];
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select a valid image file');
-        return;
-      }
-      
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size should be less than 5MB');
-        return;
-      }
-      
-      setSelectedImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  }, []);
-
+  // Navigation handlers
   const handleBack = useCallback(() => {
     router.push("/Categories");
   }, [router]);
 
   const handleCancel = useCallback(() => {
     if (categoryId && mode === "edit") {
-      // If we're editing an existing category, go back to view mode
       const params = new URLSearchParams(searchParams.toString());
       params.set("mode", "view");
       router.push(`/Categories/AddCategory?${params.toString()}`);
     } else {
-      // If we're creating a new category, go back to categories list
       router.push("/Categories");
     }
   }, [categoryId, mode, router, searchParams]);
@@ -211,60 +254,53 @@ const CategoryCreation = () => {
     router.push(`/Categories/AddCategory?${params.toString()}`);
   }, [router, searchParams]);
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const response = await axiosInstance.get("/api/v1/categories/?status_filter=false");
-      setCategories(response.data.data);
-    } catch (error) {
-      console.error("Failed to fetch categories:", error);
-      toast.error("Failed to load categories");
-    }
-  }, []);
-
-  const fetchCategory = useCallback(async (id: string) => {
-    try {
-      const response = await axiosInstance.get(`api/v1/category-items/${id}`);
-      const category = response.data.data;
-
-      setValue("name", category.category_name || category.subcategory_name || "");
-      setValue("slug", category.category_slug || category.subcategory_slug || "");
-      setValue("description", category.category_description || category.subcategory_description || "");
-      setValue("metaTitle", category.category_meta_title || category.subcategory_meta_titl || "");
-      setValue("metaDescription", category.category_meta_description || category.subcategory_meta_description || "");
-      setValue("parent", category.category_id || "none");
-      setValue("features", {
-        featured: category.featured_category || category.featured_subcategory,
-        homepage: category.show_in_menu,
-        promotions: false,
-      });
-
-      setNameTouched(false);
-
-      if (category.category_img_thumbnail || category.subcategory_img_thumbnail) {
-        setImagePreview(`${category.category_img_thumbnail || category.subcategory_img_thumbnail}`);
-      }
-    } catch (error) {
-      console.error("Failed to fetch category:", error);
-      toast.error("Failed to load category details");
-    }
-  }, [setValue]);
-
+  // Load initial data
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       try {
-        await fetchCategories();
+        // Fetch categories
+        const categoriesResponse = await axiosInstance.get<ApiResponse<Category[]>>("/api/v1/categories/?status_filter=false");
+        setCategories(categoriesResponse.data.data);
+
+        // Fetch specific category if editing/viewing
         if (categoryId) {
-          await fetchCategory(categoryId);
+          const categoryResponse = await axiosInstance.get<ApiResponse<Category>>(`/api/v1/category-items/${categoryId}`);
+          const category = categoryResponse.data.data;
+
+          // Populate form with category data
+          setValue("name", category.category_name || category.subcategory_name || "");
+          setValue("slug", category.category_slug || category.subcategory_slug || "");
+          setValue("description", category.category_description || category.subcategory_description || "");
+          setValue("metaTitle", category.category_meta_title || category.subcategory_meta_title || "");
+          setValue("metaDescription", category.category_meta_description || category.subcategory_meta_description || "");
+          setValue("parent", category.category_id || "none");
+          setValue("features", {
+            featured: category.featured_category || category.featured_subcategory || false,
+            homepage: category.show_in_menu || false,
+            promotions: false,
+          });
+
+          setNameTouched(false);
+
+          // Set image preview if exists
+          const imageUrl = category.category_img_thumbnail || category.subcategory_img_thumbnail;
+          if (imageUrl && imageUpload?.setImagePreview) {
+            imageUpload.setImagePreview(imageUrl);
+          }
         }
+      } catch (error) {
+        console.error("Failed to load data:", error);
+        toast.error("Failed to load data");
       } finally {
         setIsLoading(false);
       }
     };
     
     loadData();
-  }, [categoryId, fetchCategories, fetchCategory]);
+  }, [categoryId, setValue]);
 
+  // Handle name input change
   const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isViewMode) {
       setValue("name", e.target.value);
@@ -272,8 +308,8 @@ const CategoryCreation = () => {
     }
   }, [setValue, isViewMode]);
 
+  // Form submission
   const onSubmit = useCallback(async (data: CategoryFormData) => {
-    // Prevent API calls in view mode
     if (isSubmitting || isViewMode) {
       return;
     }
@@ -283,6 +319,7 @@ const CategoryCreation = () => {
     try {
       const formData = new FormData();
 
+      // Append form data
       formData.append("name", data.name);
       formData.append("slug", data.slug);
       formData.append("description", data.description || "");
@@ -292,8 +329,8 @@ const CategoryCreation = () => {
       formData.append("featured", String(data.features.featured));
       formData.append("show_in_menu", String(data.features.homepage));
 
-      if (selectedImageFile) {
-        formData.append("file", selectedImageFile);
+      if (imageUpload.selectedImageFile) {
+        formData.append("file", imageUpload.selectedImageFile);
       }
 
       const endpoint = categoryId
@@ -301,7 +338,7 @@ const CategoryCreation = () => {
         : "/api/v1/categories/";
       const method = categoryId ? "put" : "post";
 
-      const response = await axiosInstance[method](endpoint, formData, {
+      const response = await axiosInstance[method]<ApiResponse<any>>(endpoint, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -320,14 +357,50 @@ const CategoryCreation = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }, [isSubmitting, selectedImageFile, categoryId, router, isViewMode]);
+  }, [isSubmitting, isViewMode, imageUpload.selectedImageFile, categoryId, router]);
 
-  // Define feature options as a tuple with explicit name values
-  const featureOptions = React.useMemo(() => [
-    { name: 'features.featured' as const, key: 'featured', label: 'Featured Category', description: 'Show in featured section' },
-    { name: 'features.homepage' as const, key: 'homepage', label: 'Show in Menu', description: 'Display in main navigation' },
-    { name: 'features.promotions' as const, key: 'promotions', label: 'Promotions', description: 'Enable for promotional content' }
-  ] as const, []);
+  // Feature options configuration
+  const featureOptions = useMemo(() => [
+    { 
+      name: 'features.featured' as const, 
+      key: 'featured', 
+      label: 'Featured Category', 
+      description: 'Show in featured section' 
+    },
+    { 
+      name: 'features.homepage' as const, 
+      key: 'homepage', 
+      label: 'Show in Menu', 
+      description: 'Display in main navigation' 
+    },
+    { 
+      name: 'features.promotions' as const, 
+      key: 'promotions', 
+      label: 'Promotions', 
+      description: 'Enable for promotional content' 
+    }
+  ], []);
+
+  // Page title and description
+  const pageConfig = useMemo(() => {
+    switch (mode) {
+      case "view":
+        return {
+          title: "View Category",
+          description: "View category information and settings"
+        };
+      case "edit":
+        return {
+          title: "Edit Category",
+          description: "Update category information and settings"
+        };
+      default:
+        return {
+          title: "Create New Category",
+          description: "Add a new category to organize your content"
+        };
+    }
+  }, [mode]);
 
   if (isLoading) {
     return <CategoryFormSkeleton />;
@@ -354,20 +427,10 @@ const CategoryCreation = () => {
               <div className="hidden sm:block w-px h-8 bg-border/60" />
               <div>
                 <h1 className="text-2xl font-bold text-foreground tracking-tight">
-                  {isViewMode 
-                    ? "View Category" 
-                    : categoryId 
-                      ? "Edit Category" 
-                      : "Create New Category"
-                  }
+                  {pageConfig.title}
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {isViewMode 
-                    ? "View category information and settings" 
-                    : categoryId 
-                      ? "Update category information and settings" 
-                      : "Add a new category to organize your content"
-                  }
+                  {pageConfig.description}
                 </p>
               </div>
             </div>
@@ -396,13 +459,7 @@ const CategoryCreation = () => {
                   <Button
                     type="submit"
                     form="category-form"
-                    disabled={isSubmitting || isViewMode}
-                    onClick={(e) => {
-                      if (isViewMode) {
-                        e.preventDefault();
-                        return false;
-                      }
-                    }}
+                    disabled={isSubmitting}
                     className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 min-w-[140px]"
                   >
                     {isSubmitting ? (
@@ -442,7 +499,7 @@ const CategoryCreation = () => {
 
         <form
           id="category-form"
-          onSubmit={isViewMode ? (e) => e.preventDefault() : handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(onSubmit)}
           className="grid grid-cols-1 lg:grid-cols-2 gap-8"
         >
           {/* Enhanced Upload Image Card */}
@@ -455,7 +512,7 @@ const CategoryCreation = () => {
                 {isViewMode ? "Category Image" : "Upload Image"}
               </CardTitle>
               <CardDescription className="text-muted-foreground/80">
-                {isViewMode ? "Category image" : "Upload a category image (Max 5MB, JPG/PNG/GIF)"}
+                {isViewMode ? "Category image" : `Upload a category image (Max ${MAX_IMAGE_SIZE / (1024 * 1024)}MB, JPG/PNG/GIF)`}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
@@ -464,20 +521,20 @@ const CategoryCreation = () => {
                   "border-2 border-dashed rounded-xl p-8 text-center relative transition-all duration-300 group",
                   isViewMode 
                     ? "border-border/40 bg-muted/20" 
-                    : dragActive
+                    : imageUpload.dragActive
                       ? "border-primary bg-gradient-to-br from-primary/10 to-primary/5 scale-[1.02] shadow-lg"
                       : "border-border/60 hover:border-primary/60 hover:bg-gradient-to-br hover:from-accent/20 hover:to-primary/5 hover:scale-[1.01] hover:shadow-md"
                 )}
-                onDragEnter={!isViewMode ? handleDrag : undefined}
-                onDragLeave={!isViewMode ? handleDrag : undefined}
-                onDragOver={!isViewMode ? handleDrag : undefined}
-                onDrop={!isViewMode ? handleDrop : undefined}
+                onDragEnter={imageUpload.handleDrag}
+                onDragLeave={imageUpload.handleDrag}
+                onDragOver={imageUpload.handleDrag}
+                onDrop={imageUpload.handleDrop}
               >
-                {imagePreview && (
+                {imageUpload.imagePreview ? (
                   <div className="relative group">
                     <div className="relative overflow-hidden rounded-xl border-2 border-border/40 bg-gradient-to-br from-muted/20 to-muted/10">
                       <Image
-                        src={imagePreview}
+                        src={imageUpload.imagePreview}
                         alt="Preview"
                         width={400}
                         height={208}
@@ -490,15 +547,14 @@ const CategoryCreation = () => {
                         type="button"
                         variant="destructive"
                         size="sm"
-                        onClick={handleImageRemove}
+                        onClick={imageUpload.handleImageRemove}
                         className="absolute -top-2 -right-2 h-8 w-8 p-0 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 bg-destructive/90 hover:bg-destructive"
                       >
                         <X className="h-4 w-4" />
                       </Button>
                     )}
                   </div>
-                )}
-                {imagePreview === null && (
+                ) : (
                   <div className="space-y-6">
                     <div className="relative">
                       <ImageIcon className="mx-auto h-16 w-16 text-muted-foreground/60 transition-colors duration-300" />
@@ -520,12 +576,12 @@ const CategoryCreation = () => {
                           <Input
                             id="image-upload"
                             type="file"
-                            accept="image/*"
+                            accept={ACCEPTED_IMAGE_TYPES.join(',')}
                             className="hidden"
-                            onChange={handleImageChange}
+                            onChange={imageUpload.handleImageChange}
                           />
                           <p className="text-xs text-muted-foreground/60 mt-2">
-                            Supported formats: JPG, PNG, GIF • Max size: 5MB
+                            Supported formats: JPG, PNG, GIF • Max size: {MAX_IMAGE_SIZE / (1024 * 1024)}MB
                           </p>
                         </>
                       )}
@@ -618,7 +674,7 @@ const CategoryCreation = () => {
                 <Label htmlFor="description" className="text-sm font-semibold text-foreground flex items-center justify-between">
                   <span>Description</span>
                   <span className="text-xs text-muted-foreground/60 font-normal">
-                    {watch("description")?.length || 0}/500
+                    {watch("description")?.length || 0}/{MAX_DESCRIPTION_LENGTH}
                   </span>
                 </Label>
                 <div className="relative">
@@ -633,7 +689,7 @@ const CategoryCreation = () => {
                       errors.description && "border-destructive/60 focus:border-destructive focus:ring-destructive/20",
                       isViewMode && "bg-background border-border/40 text-foreground cursor-default"
                     )}
-                    maxLength={500}
+                    maxLength={MAX_DESCRIPTION_LENGTH}
                   />
                 </div>
                 {errors.description && (
@@ -667,7 +723,7 @@ const CategoryCreation = () => {
                             None (Root Category)
                           </div>
                         </SelectItem>
-                        {categories.map((category: any) => (
+                        {categories.map((category) => (
                           <SelectItem key={category.category_id} value={category.category_id} className="hover:bg-accent/80 focus:bg-accent/80">
                             <div className="flex items-center gap-2">
                               <div className="w-2 h-2 rounded-full bg-accent/60" />
@@ -753,7 +809,7 @@ const CategoryCreation = () => {
                     "text-xs font-normal transition-colors",
                     (watch("metaTitle")?.length || 0) > 60 ? "text-orange-500" : "text-muted-foreground/60"
                   )}>
-                    {watch("metaTitle")?.length || 0}/70
+                    {watch("metaTitle")?.length || 0}/{MAX_META_TITLE_LENGTH}
                   </span>
                 </Label>
                 <div className="relative">
@@ -768,7 +824,7 @@ const CategoryCreation = () => {
                       errors.metaTitle && "border-destructive/60 focus:border-destructive focus:ring-destructive/20",
                       isViewMode && "bg-background border-border/40 text-foreground cursor-default"
                     )}
-                    maxLength={70}
+                    maxLength={MAX_META_TITLE_LENGTH}
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     {(watch("metaTitle")?.length || 0) >= 50 && (watch("metaTitle")?.length || 0) <= 60 && (
@@ -794,7 +850,7 @@ const CategoryCreation = () => {
                     "text-xs font-normal transition-colors",
                     (watch("metaDescription")?.length || 0) > 150 ? "text-orange-500" : "text-muted-foreground/60"
                   )}>
-                    {watch("metaDescription")?.length || 0}/160
+                    {watch("metaDescription")?.length || 0}/{MAX_META_DESCRIPTION_LENGTH}
                   </span>
                 </Label>
                 <div className="relative">
@@ -809,7 +865,7 @@ const CategoryCreation = () => {
                       errors.metaDescription && "border-destructive/60 focus:border-destructive focus:ring-destructive/20",
                       isViewMode && "bg-background border-border/40 text-foreground cursor-default"
                     )}
-                    maxLength={160}
+                    maxLength={MAX_META_DESCRIPTION_LENGTH}
                   />
                   <div className="absolute right-3 top-3">
                     {(watch("metaDescription")?.length || 0) >= 150 && (watch("metaDescription")?.length || 0) <= 160 && (
