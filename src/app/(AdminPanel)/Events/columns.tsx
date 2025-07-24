@@ -69,12 +69,10 @@ export interface Event {
 // Actions cell component
 const ActionsCell = ({ 
   event, 
-  onDelete, 
-  onView 
+  onDelete 
 }: { 
   event: Event; 
   onDelete: (id: string) => void;
-  onView: (id: string) => void;
 }) => {
   const router = useRouter()
 
@@ -94,7 +92,7 @@ const ActionsCell = ({
           Copy event ID
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => onView(event.event_id)}>
+        <DropdownMenuItem onClick={() => router.push(`/Events/view/${event.event_id}`)}>
           <Eye className="mr-2 h-4 w-4" />
           View Details
         </DropdownMenuItem>
@@ -116,8 +114,7 @@ const ActionsCell = ({
 }
 
 export const createColumns = (
-  onDelete: (id: string) => void,
-  onView: (id: string) => void
+  onDelete: (id: string) => void
 ): ColumnDef<Event>[] => [
   {
     id: "select",
@@ -302,7 +299,7 @@ export const createColumns = (
       const event = row.original
       return (
         <Badge variant={event.event_status ? "default" : "secondary"}>
-          {event.event_status ? "Active" : "Inactive"}
+          {event.event_status ? "Inactive" : "Active"}
         </Badge>
       )
     },
@@ -334,7 +331,7 @@ export const createColumns = (
     enableHiding: false,
     cell: ({ row }) => {
       const event = row.original
-      return <ActionsCell event={event} onDelete={onDelete} onView={onView} />
+      return <ActionsCell event={event} onDelete={onDelete} />
     },
   },
 ]

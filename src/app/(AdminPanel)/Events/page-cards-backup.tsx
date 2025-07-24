@@ -267,8 +267,8 @@ console.log(userId,isAuthenticated)
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="true">Active</SelectItem>
-                  <SelectItem value="false">Inactive</SelectItem>
+                  <SelectItem value="false">Active</SelectItem>
+                  <SelectItem value="true">Inactive</SelectItem>
                 </SelectContent>
               </Select>
               
