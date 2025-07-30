@@ -517,15 +517,6 @@ export default function ProfilePage() {
                 </span>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-muted-foreground">
-                User ID
-              </Label>
-              <p className="text-sm font-mono text-muted-foreground bg-muted/30 px-3 py-2 rounded-md border">
-                {user?.id || "Not available"}
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>

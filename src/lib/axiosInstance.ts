@@ -2,7 +2,6 @@
 
 import axios from 'axios';
 
-
 const axiosInstance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL, // Ensure this is set in your .env.local file
   headers: {
@@ -11,9 +10,6 @@ const axiosInstance = axios.create({
   },
   withCredentials: true,
 });
-
-
-
 
 axiosInstance.interceptors.request.use(
   config => {
@@ -53,7 +49,7 @@ axiosInstance.interceptors.response.use(
         );
 
         const { access_token, refresh_token: newRefreshToken, session_id } = refreshResponse.data.data;
-        
+
         // Update tokens in sessionStorage
         sessionStorage.setItem('token', access_token);
         sessionStorage.setItem('refreshToken', newRefreshToken);
