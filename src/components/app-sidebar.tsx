@@ -207,6 +207,7 @@ import {
   CalendarDays,
   Tags,
   LineChart,
+  UserCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -235,6 +236,7 @@ const navItems: NavItem[] = [
     icon: Tags,
     href:'/Categories'
   },
+  { label: 'Organizers', icon: UserCheck, href: '/Organizers' },
   // { label: 'Revenue', icon: LineChart, href: '/Revenue' },
 ];
 
