@@ -129,7 +129,7 @@ console.log(organizers);
 
   const confirmHoldOrganizer = async (reason: string) => {
     if (organizerToHold && reason.trim()) {
-      const success = await handleHoldOrganizer(organizerToHold, reason);
+      const success = await handleHoldOrganizer(organizerToHold, );
       if (success) {
         setSelectedOrganizer((prev) =>
           prev && prev.id === organizerToHold.id
@@ -164,6 +164,16 @@ console.log(organizers);
       );
     }
   };
+const handleHoldOrganizerWithUpdate = async (organizer: Organizer, reason: string) => {
+  const success = await handleHoldOrganizer(organizer, reason);
+  if (success) {
+    setSelectedOrganizer((prev) =>
+      prev && prev.id === organizer.id
+        ? { ...prev, status: "Hold", isActive: true }
+        : prev
+    );
+  }
+};
 
   const handleApproveOrganizerWithUpdate = async (organizer: Organizer) => {
     const success = await handleApproveOrganizer(organizer);
@@ -271,7 +281,7 @@ console.log(organizers);
           onClose={() => setSelectedOrganizer(null)}
           onApprove={handleApproveOrganizerWithUpdate}
           onReject={handleRejectOrganizerDialog}
-          onHold={handleHoldOrganizerDialog}
+          onHold={handleHoldOrganizerWithUpdate}
           onDelete={handleDeleteOrganizerDialog}
           onRestore={handleRestoreOrganizerDialog}
         />

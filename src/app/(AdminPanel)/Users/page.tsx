@@ -221,7 +221,7 @@ export default function UsersPage() {
       setRoles(response.data.data);
     } catch (error) {
       console.error("Failed to fetch roles:", error);
-      toast.error("Failed to fetch roles");
+
     }
   };
 

@@ -219,13 +219,13 @@ export const useOrganizerActions = (setOrganizers: React.Dispatch<React.SetState
     }
   };
 
-  const handleHoldOrganizer = async (organizer: Organizer, reason?: string) => {
+  const handleHoldOrganizer = async (organizer: Organizer, ) => {
     try {
-      const response = await axiosInstance.post(
-        `/api/v1/organizers/approval/hold?user_id=${organizer.id}${reason ? `&reviewer_comment=${encodeURIComponent(reason)}` : ''}`
+      const response = await axiosInstance.patch(
+        `/api/v1/organizers/approval/under-review?user_id=${organizer.id}`
       );
       
-      if (response.status === 200 && response.data.message.includes("successfully")) {
+      if (response.status === 200 ) {
         setOrganizers((prev) =>
           prev.map((v) =>
             v.id === organizer.id
