@@ -260,7 +260,7 @@ const CategoryCreation = () => {
       setIsLoading(true);
       try {
         // Fetch categories
-        const categoriesResponse = await axiosInstance.get<ApiResponse<Category[]>>("/api/v1/categories/?status_filter=false");
+        const categoriesResponse = await axiosInstance.get<ApiResponse<Category[]>>("/api/v1/categories?status_filter=false");
         setCategories(categoriesResponse.data.data);
 
         // Fetch specific category if editing/viewing

@@ -216,7 +216,7 @@ export default function UsersPage() {
   const fetchRoles = async () => {
     try {
       const response = await axiosInstance.get(
-        "/api/v1/roles/?is_active=false"
+        "/api/v1/roles?is_active=false"
       );
       setRoles(response.data.data);
     } catch (error) {
