@@ -1,16 +1,14 @@
 import {
   MoreVertical,
   Eye,
-  CheckCircle,
-  XCircle,
   ExternalLink,
   MessageSquare,
   Trash2,
-  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,19 +23,15 @@ import { getStatusBadge, getRoleBadge } from "./BadgeComponents";
 interface OrganizersTableProps {
   organizers: Organizer[];
   onViewOrganizer: (organizer: Organizer) => void;
-  onApproveOrganizer: (organizer: Organizer) => void;
-  onRejectOrganizer: (organizer: Organizer) => void;
   onDeleteOrganizer: (organizer: Organizer) => void;
-  onRestoreOrganizer: (organizer: Organizer) => void;
+  onToggleActiveStatus: (organizer: Organizer) => void;
 }
 
 export function OrganizersTable({
   organizers,
   onViewOrganizer,
-  onApproveOrganizer,
-  onRejectOrganizer,
   onDeleteOrganizer,
-  onRestoreOrganizer,
+  onToggleActiveStatus,
 }: OrganizersTableProps) {
   return (
     <Card className="backdrop-blur-xl bg-white/80 dark:bg-slate-900/80 border-0 shadow-xl rounded-2xl overflow-hidden">
@@ -62,6 +56,9 @@ export function OrganizersTable({
                 </th>
                 <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300 hidden lg:table-cell">
                   Role
+                </th>
+                <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">
+                  Active Status
                 </th>
                 <th className="text-left p-4 font-semibold text-slate-700 dark:text-slate-300">
                   Actions
@@ -105,6 +102,23 @@ export function OrganizersTable({
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-2">
+                      <Switch
+                        checked={organizer.isActive}
+                        onCheckedChange={() => onToggleActiveStatus(organizer)}
+                        disabled={organizer.status === "Rejected"}
+                        className={organizer.status === "Rejected" ? "opacity-50 cursor-not-allowed" : ""}
+                      />
+                      <span className={`text-sm font-medium ${
+                        organizer.isActive 
+                          ? "text-green-600 dark:text-green-400" 
+                          : "text-gray-500 dark:text-gray-400"
+                      } ${organizer.status === "Rejected" ? "opacity-50" : ""}`}>
+                        {organizer.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -127,14 +141,14 @@ export function OrganizersTable({
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem
+                          {/* <DropdownMenuItem
                             onClick={() =>
                               window.open(organizer.storeUrl, "_blank")
                             }
                           >
                             <ExternalLink className="w-4 h-4 mr-2" />
                             View Store
-                          </DropdownMenuItem>
+                          </DropdownMenuItem> */}
                           <DropdownMenuItem
                             onClick={() => {
                               window.location.href = `mailto:${organizer.email}`;
@@ -143,43 +157,15 @@ export function OrganizersTable({
                             <MessageSquare className="w-4 h-4 mr-2" />
                             Contact Organizer
                           </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          {organizer.status === "pending" && (
-                            <>
-                              <DropdownMenuItem
-                                className="text-green-600"
-                                onClick={() => onApproveOrganizer(organizer)}
-                              >
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Approve
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => onRejectOrganizer(organizer)}
-                              >
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Reject
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                            </>
-                          )}
-                          {organizer.isActive ? (
-                            <DropdownMenuItem
-                              className="text-green-600"
-                              onClick={() => onRestoreOrganizer(organizer)}
-                            >
-                              <RotateCcw className="w-4 h-4 mr-2" />
-                              Restore
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => onDeleteOrganizer(organizer)}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Deactivate
-                            </DropdownMenuItem>
-                          )}
+                          {/* <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onClick={() => onDeleteOrganizer(organizer)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem> */}
+
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

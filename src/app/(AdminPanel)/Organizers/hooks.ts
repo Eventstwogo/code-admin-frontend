@@ -39,7 +39,7 @@ export const useOrganizers = () => {
       setLoading(false);
     }
   };
-
+console.log('useOrganizers', organizers);
   useEffect(() => {
     fetchOrganizers();
   }, []);
@@ -55,6 +55,7 @@ export const useOrganizerFilters = (organizers: Organizer[]) => {
   });
 
   const filteredOrganizers = useMemo(() => {
+  
     return organizers.filter((organizer) => {
       const matchesSearch =
         organizer.storeName.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
@@ -125,10 +126,11 @@ export const useOrganizerActions = (setOrganizers: React.Dispatch<React.SetState
     }
   };
 
-  const handleRejectOrganizer = async (organizer: Organizer) => {
+  const handleRejectOrganizer = async (organizer: Organizer, reason?: string) => {
     try {
       const response = await axiosInstance.post(
-        `/api/v1/organizers/approval/reject?user_id=${organizer.id}`
+        `/api/v1/organizers/approval/reject?user_id=${organizer.id}&reviewer_comment=${reason}`,
+       
       );
       
       // Check for successful response (status 200)
@@ -217,10 +219,100 @@ export const useOrganizerActions = (setOrganizers: React.Dispatch<React.SetState
     }
   };
 
+  const handleHoldOrganizer = async (organizer: Organizer, reason?: string) => {
+    try {
+      const response = await axiosInstance.post(
+        `/api/v1/organizers/approval/hold?user_id=${organizer.id}${reason ? `&reviewer_comment=${encodeURIComponent(reason)}` : ''}`
+      );
+      
+      if (response.status === 200 && response.data.message.includes("successfully")) {
+        setOrganizers((prev) =>
+          prev.map((v) =>
+            v.id === organizer.id
+              ? { ...v, status: "Hold", isActive: true }
+              : v
+          )
+        );
+        toast.success("Organizer put on hold successfully!");
+        return true;
+      } else {
+        throw new Error(response.data.message || "Failed to put organizer on hold");
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.detail ||
+                          "Failed to put organizer on hold. Please try again.";
+      toast.error(errorMessage);
+      console.error(error);
+      return false;
+    }
+  };
+
+  const handleActivateOrganizer = async (organizer: Organizer) => {
+    try {
+      const response = await axiosInstance.put(
+        `/api/v1/organizers/approval/restore?user_id=${organizer.id}`
+      );
+      
+      if (response.status === 200 && response.data.message.includes("successfully")) {
+        setOrganizers((prev) =>
+          prev.map((v) =>
+            v.id === organizer.id
+              ? { ...v, isActive: true }
+              : v
+          )
+        );
+        toast.success("Organizer activated successfully!");
+        return true;
+      } else {
+        throw new Error(response.data.message || "Failed to activate organizer");
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.detail ||
+                          "Failed to activate organizer. Please try again.";
+      toast.error(errorMessage);
+      console.error(error);
+      return false;
+    }
+  };
+
+  const handleDeactivateOrganizer = async (organizer: Organizer) => {
+    try {
+      const response = await axiosInstance.put(
+        `/api/v1/organizers/approval/soft-delete?user_id=${organizer.id}`
+      );
+      
+      if (response.status === 200 && response.data.message.includes("successfully")) {
+        setOrganizers((prev) =>
+          prev.map((v) =>
+            v.id === organizer.id
+              ? { ...v, isActive: false }
+              : v
+          )
+        );
+        toast.success("Organizer deactivated successfully!");
+        return true;
+      } else {
+        throw new Error(response.data.message || "Failed to deactivate organizer");
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.detail ||
+                          "Failed to deactivate organizer. Please try again.";
+      toast.error(errorMessage);
+      console.error(error);
+      return false;
+    }
+  };
+
   return {
     handleApproveOrganizer,
     handleRejectOrganizer,
     handleDeleteOrganizer,
     handleRestoreOrganizer,
+    handleHoldOrganizer,
+    handleActivateOrganizer,
+    handleDeactivateOrganizer,
   };
 };

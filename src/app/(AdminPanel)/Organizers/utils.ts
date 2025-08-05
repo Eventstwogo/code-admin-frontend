@@ -59,9 +59,9 @@ export const transformOrganizerData = (organizer: any): Organizer | null => {
       organizer_login.last_login?.split("T")[0] ||
       organizer_login.created_at.split("T")[0],
     status: business_profile.is_approved === 1 
-      ? "approved" 
+      ? "Hold" 
       : business_profile.is_approved === 2 
-      ? "rejected" 
+      ? "Approved"  : business_profile.is_approved === -1 ? "Rejected"
       : "pending",
     isActive: !organizer_login.is_deleted, // Use is_deleted field to determine if active
     avatar: business_profile.profile_details?.avatar || null,

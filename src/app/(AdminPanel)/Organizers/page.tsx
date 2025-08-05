@@ -37,8 +37,12 @@ const OrganizerManagement = () => {
   const [organizerToDelete, setOrganizerToDelete] = useState<Organizer | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [organizerToReject, setOrganizerToReject] = useState<Organizer | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [organizerToRestore, setOrganizerToRestore] = useState<Organizer | null>(null);
+  const [holdDialogOpen, setHoldDialogOpen] = useState(false);
+  const [organizerToHold, setOrganizerToHold] = useState<Organizer | null>(null);
+  const [holdReason, setHoldReason] = useState("");
 
   // Custom hooks
   const { organizers, setOrganizers, loading, error } = useOrganizers();
@@ -49,17 +53,21 @@ const OrganizerManagement = () => {
     handleRejectOrganizer,
     handleDeleteOrganizer,
     handleRestoreOrganizer,
+    handleHoldOrganizer,
+    handleActivateOrganizer,
+    handleDeactivateOrganizer,
   } = useOrganizerActions(setOrganizers);
 
   // Dialog handlers
   const handleRejectOrganizerDialog = (organizer: Organizer) => {
     setOrganizerToReject(organizer);
+    setRejectionReason(""); // Reset rejection reason
     setRejectDialogOpen(true);
   };
 
-  const confirmRejectOrganizer = async () => {
-    if (organizerToReject) {
-      const success = await handleRejectOrganizer(organizerToReject);
+  const confirmRejectOrganizer = async (reason: string) => {
+    if (organizerToReject && reason.trim()) {
+      const success = await handleRejectOrganizer(organizerToReject, reason);
       if (success) {
         setSelectedOrganizer((prev) =>
           prev && prev.id === organizerToReject.id
@@ -69,6 +77,7 @@ const OrganizerManagement = () => {
       }
       setRejectDialogOpen(false);
       setOrganizerToReject(null);
+      setRejectionReason("");
     }
   };
 
@@ -112,12 +121,75 @@ const OrganizerManagement = () => {
     }
   };
 
+  const handleHoldOrganizerDialog = (organizer: Organizer) => {
+    setOrganizerToHold(organizer);
+    setHoldReason(""); // Reset hold reason
+    setHoldDialogOpen(true);
+  };
+
+  const confirmHoldOrganizer = async (reason: string) => {
+    if (organizerToHold && reason.trim()) {
+      const success = await handleHoldOrganizer(organizerToHold, reason);
+      if (success) {
+        setSelectedOrganizer((prev) =>
+          prev && prev.id === organizerToHold.id
+            ? { ...prev, status: "Hold", isActive: true }
+            : prev
+        );
+      }
+      setHoldDialogOpen(false);
+      setOrganizerToHold(null);
+      setHoldReason("");
+    }
+  };
+
+  const handleActivateOrganizerWithUpdate = async (organizer: Organizer) => {
+    const success = await handleActivateOrganizer(organizer);
+    if (success) {
+      setSelectedOrganizer((prev) =>
+        prev && prev.id === organizer.id
+          ? { ...prev, isActive: true }
+          : prev
+      );
+    }
+  };
+
+  const handleDeactivateOrganizerWithUpdate = async (organizer: Organizer) => {
+    const success = await handleDeactivateOrganizer(organizer);
+    if (success) {
+      setSelectedOrganizer((prev) =>
+        prev && prev.id === organizer.id
+          ? { ...prev, isActive: false }
+          : prev
+      );
+    }
+  };
+
   const handleApproveOrganizerWithUpdate = async (organizer: Organizer) => {
     const success = await handleApproveOrganizer(organizer);
     if (success) {
       setSelectedOrganizer((prev) =>
         prev && prev.id === organizer.id
           ? { ...prev, status: "approved", isActive: true }
+          : prev
+      );
+    }
+  };
+
+  const handleToggleActiveStatus = async (organizer: Organizer) => {
+    // Prevent activation if organizer is rejected
+    if (organizer.status === "rejected" && !organizer.isActive) {
+      return;
+    }
+
+    const success = organizer.isActive 
+      ? await handleDeactivateOrganizer(organizer)
+      : await handleActivateOrganizer(organizer);
+    
+    if (success) {
+      setSelectedOrganizer((prev) =>
+        prev && prev.id === organizer.id
+          ? { ...prev, isActive: !organizer.isActive }
           : prev
       );
     }
@@ -185,10 +257,8 @@ const OrganizerManagement = () => {
           <OrganizersTable
             organizers={filteredOrganizers}
             onViewOrganizer={setSelectedOrganizer}
-            onApproveOrganizer={handleApproveOrganizerWithUpdate}
-            onRejectOrganizer={handleRejectOrganizerDialog}
             onDeleteOrganizer={handleDeleteOrganizerDialog}
-            onRestoreOrganizer={handleRestoreOrganizerDialog}
+            onToggleActiveStatus={handleToggleActiveStatus}
           />
         ) : (
           !loading && <EmptyState hasFilters={hasFilters} />
@@ -201,6 +271,7 @@ const OrganizerManagement = () => {
           onClose={() => setSelectedOrganizer(null)}
           onApprove={handleApproveOrganizerWithUpdate}
           onReject={handleRejectOrganizerDialog}
+          onHold={handleHoldOrganizerDialog}
           onDelete={handleDeleteOrganizerDialog}
           onRestore={handleRestoreOrganizerDialog}
         />
@@ -214,7 +285,22 @@ const OrganizerManagement = () => {
             onCancel: () => {
               setRejectDialogOpen(false);
               setOrganizerToReject(null);
+              setRejectionReason("");
             },
+            rejectionReason,
+            onReasonChange: setRejectionReason,
+          }}
+          holdDialog={{
+            open: holdDialogOpen,
+            organizer: organizerToHold,
+            onConfirm: confirmHoldOrganizer,
+            onCancel: () => {
+              setHoldDialogOpen(false);
+              setOrganizerToHold(null);
+              setHoldReason("");
+            },
+            holdReason,
+            onReasonChange: setHoldReason,
           }}
           restoreDialog={{
             open: restoreDialogOpen,

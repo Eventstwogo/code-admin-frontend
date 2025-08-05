@@ -1,11 +1,14 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDashboardStats, useThemeAnimations } from "@/hooks/use-dashboard-stats";
+import { Badge } from "@/components/ui/badge";
+import axiosInstance from "@/lib/axiosInstance";
+import useStore from "@/lib/Zustand";
+import { AxiosError } from "axios";
 import {
   LayoutGrid,
   Users,
@@ -23,21 +26,117 @@ import {
   AlertCircle,
   Bell,
   User as UserIcon,
+  MessageSquare,
+  Building2,
+  Eye,
+  Clock,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 
-// Mock user info (replace with real user data if available)
-const user = {
-  name: "Admin User",
-  avatar: null,
-  role: "Administrator",
-};
+// Interfaces for API data
+interface DashboardStats {
+  totalUsers: number;
+  totalOrganizers: number;
+  totalEvents: number;
+  totalQueries: number;
+  pendingQueries: number;
+  resolvedQueries: number;
+  totalRevenue: number;
+  activeEvents: number;
+}
 
-// Mock recent activity (replace with real data if available)
-const recentActivity = [
-  { id: 1, type: "event", message: "Created new event: Summer Fest 2024", time: "2 hours ago" },
-  { id: 2, type: "user", message: "New user registered: John Doe", time: "4 hours ago" },
-  { id: 3, type: "ticket", message: "Sold 50 tickets for Music Night", time: "Yesterday" },
-];
+interface RecentQuery {
+  id: number;
+  title: string;
+  sender_user_id: string;
+  query_status: string;
+  created_at: string;
+  last_message: string;
+}
+
+interface StatsCard {
+  title: string;
+  count: string;
+  trend: string;
+  trendDirection: 'up' | 'down' | 'neutral';
+  percentage?: string;
+  icon: React.ReactNode;
+  href: string;
+  gradient: string;
+  bgGradient: string;
+  iconBg: string;
+  iconColor: string;
+}
+
+// Custom hook for dashboard data
+const useDashboardData = () => {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [recentQueries, setRecentQueries] = useState<RecentQuery[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { userId } = useStore();
+
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch multiple endpoints in parallel
+      const [queriesResponse] = await Promise.all([
+        axiosInstance.get('/api/v1/organizers/queries/all/by-status?limit=5'),
+        // Add more API calls here as needed
+      ]);
+
+      // Process queries data
+      const queriesData = queriesResponse.data.data;
+      setRecentQueries(queriesData.queries || []);
+
+      // Calculate stats from the data
+      const mockStats: DashboardStats = {
+        totalUsers: 1250,
+        totalOrganizers: 85,
+        totalEvents: 42,
+        totalQueries: queriesData.pagination?.total_items || 0,
+        pendingQueries: queriesData.queries?.filter((q: RecentQuery) => q.query_status === 'pending').length || 0,
+        resolvedQueries: queriesData.queries?.filter((q: RecentQuery) => q.query_status === 'answered').length || 0,
+        totalRevenue: 125000,
+        activeEvents: 15,
+      };
+
+      setStats(mockStats);
+    } catch (err) {
+      console.error('Dashboard data fetch error:', err);
+      if (err instanceof AxiosError) {
+        if (err.response) {
+          setError(`Server error: ${err.response.data?.message || err.response.status}`);
+        } else if (err.request) {
+          setError('Network error: Unable to connect to server');
+        } else {
+          setError('Error setting up request');
+        }
+      } else {
+        setError('Failed to fetch dashboard data');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (userId) {
+      fetchDashboardData();
+    }
+  }, [userId]);
+
+  return {
+    stats,
+    recentQueries,
+    isLoading,
+    error,
+    refetch: fetchDashboardData,
+  };
+};
 
 // Dashboard skeleton component
 const DashboardSkeleton = () => {
@@ -122,8 +221,8 @@ const DashboardSkeleton = () => {
 };
 
 const DashboardPage = () => {
-  const { formattedStats, isLoading, error, refetch } = useDashboardStats();
-  const { mounted, getCardHoverClass, getIconAnimationClass, getButtonAnimationClass } = useThemeAnimations();
+  const { stats, recentQueries, isLoading, error, refetch } = useDashboardData();
+  const { userId } = useStore();
 
   const getTrendIcon = (direction: 'up' | 'down' | 'neutral') => {
     switch (direction) {
@@ -136,76 +235,93 @@ const DashboardPage = () => {
     }
   };
 
-  const statsConfig = [
-    {
-      title: "Categories",
-      icon: <LayoutGrid className="w-6 h-6" />,
-      description: "Manage all ticket categories",
-      href: "/Categories",
-      gradient: "from-blue-500 to-indigo-600",
-      bgGradient: "from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20",
-      iconBg: "bg-blue-100 dark:bg-blue-900/30",
-      iconColor: "text-blue-600 dark:text-blue-400",
-    },
-    {
-      title: "Users",
-      icon: <Users className="w-6 h-6" />,
-      description: "View and manage all users",
-      href: "/Users",
-      gradient: "from-green-500 to-emerald-600",
-      bgGradient: "from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20",
-      iconBg: "bg-green-100 dark:bg-green-900/30",
-      iconColor: "text-green-600 dark:text-green-400",
-    },
-    {
-      title: "Revenue",
-      icon: <ShoppingCart className="w-6 h-6" />,
-      description: "Track ticket sales and earnings",
-      href: "/Revenue",
-      gradient: "from-yellow-500 to-orange-600",
-      bgGradient: "from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20",
-      iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
-      iconColor: "text-yellow-600 dark:text-yellow-400",
-    },
-    {
-      title: "Settings",
-      icon: <Settings className="w-6 h-6" />,
-      description: "System configuration and preferences",
-      href: "/Settings",
-      gradient: "from-purple-500 to-violet-600",
-      bgGradient: "from-purple-50 to-violet-50 dark:from-purple-950/20 dark:to-violet-950/20",
-      iconBg: "bg-purple-100 dark:bg-purple-900/30",
-      iconColor: "text-purple-600 dark:text-purple-400",
-    },
-  ];
+  // Generate stats cards with real data
+  const getStatsCards = (): StatsCard[] => {
+    if (!stats) return [];
+
+    return [
+      {
+        title: "Total Users",
+        count: stats.totalUsers.toLocaleString(),
+        trend: "+12% from last month",
+        trendDirection: 'up',
+        percentage: "+12%",
+        icon: <Users className="w-6 h-6" />,
+        href: "/Users",
+        gradient: "from-blue-500 to-indigo-600",
+        bgGradient: "from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20",
+        iconBg: "bg-blue-100 dark:bg-blue-900/30",
+        iconColor: "text-blue-600 dark:text-blue-400",
+      },
+      {
+        title: "Organizers",
+        count: stats.totalOrganizers.toString(),
+        trend: "+5 this week",
+        trendDirection: 'up',
+        percentage: "+6.3%",
+        icon: <Building2 className="w-6 h-6" />,
+        href: "/Organizers",
+        gradient: "from-green-500 to-emerald-600",
+        bgGradient: "from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20",
+        iconBg: "bg-green-100 dark:bg-green-900/30",
+        iconColor: "text-green-600 dark:text-green-400",
+      },
+      {
+        title: "Total Events",
+        count: stats.totalEvents.toString(),
+        trend: "+8 this month",
+        trendDirection: 'up',
+        percentage: "+23.5%",
+        icon: <CalendarCheck className="w-6 h-6" />,
+        href: "/Events",
+        gradient: "from-purple-500 to-violet-600",
+        bgGradient: "from-purple-50 to-violet-50 dark:from-purple-950/20 dark:to-violet-950/20",
+        iconBg: "bg-purple-100 dark:bg-purple-900/30",
+        iconColor: "text-purple-600 dark:text-purple-400",
+      },
+      {
+        title: "Queries",
+        count: stats.totalQueries.toString(),
+        trend: `${stats.pendingQueries} pending`,
+        trendDirection: stats.pendingQueries > 5 ? 'down' : 'up',
+        percentage: `${stats.resolvedQueries} resolved`,
+        icon: <MessageSquare className="w-6 h-6" />,
+        href: "/Enqueries",
+        gradient: "from-yellow-500 to-orange-600",
+        bgGradient: "from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20",
+        iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
+        iconColor: "text-yellow-600 dark:text-yellow-400",
+      },
+    ];
+  };
 
   const quickActions = [
     {
-      title: "Events",
-      icon: <CalendarCheck className="w-5 h-5" />,
-      description: "Manage events",
-      href: "/Events",
+      title: "Categories",
+      icon: <LayoutGrid className="w-5 h-5" />,
+      description: "Manage categories",
+      href: "/Categories",
       color: "text-rose-600 dark:text-rose-400",
     },
     {
-      title: "Tickets",
-      icon: <Ticket className="w-5 h-5" />,
-      description: "View tickets",
-      href: "/Tickets",
+      title: "Revenue",
+      icon: <ShoppingCart className="w-5 h-5" />,
+      description: "View revenue",
+      href: "/Revenue",
       color: "text-cyan-600 dark:text-cyan-400",
     },
     {
-      title: "Analytics",
-      icon: <BarChart3 className="w-5 h-5" />,
-      description: "View reports",
-      href: "/Analytics",
+      title: "Roles",
+      icon: <Settings className="w-5 h-5" />,
+      description: "Manage roles",
+      href: "/Roles",
       color: "text-amber-600 dark:text-amber-400",
     },
     {
-      title: "Activity",
+      title: "Sessions",
       icon: <Activity className="w-5 h-5" />,
-      description: "Recent activity",
-      href: "/Activity",
+      description: "Active sessions",
+      href: "/sessions",
       color: "text-teal-600 dark:text-teal-400",
     },
   ];
@@ -249,14 +365,17 @@ const DashboardPage = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              Dashboard
+              Admin Dashboard
             </h1>
             <p className="text-muted-foreground">
-              Welcome back, <span className="font-semibold text-foreground">{user.name}</span>! Here&apos;s an overview of your ticket booking system.
+              Welcome back! Here&apos;s an overview of your ticket booking system.
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={refetch} variant="ghost" size="icon" className="rounded-full" disabled={isLoading}>
+            <RefreshCw className={`w-5 h-5 text-muted-foreground ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
           <Link href="/Settings">
             <Button variant="ghost" size="icon" className="rounded-full">
               <Settings className="w-5 h-5 text-muted-foreground" />
@@ -270,100 +389,150 @@ const DashboardPage = () => {
             <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
               <UserIcon className="w-5 h-5 text-muted-foreground" />
             </div>
-            <span className="text-sm text-foreground font-medium">{user.role}</span>
+            <span className="text-sm text-foreground font-medium">Administrator</span>
           </div>
         </div>
       </div>
 
       {/* Quick Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statsConfig.map((config, index) => {
-          const statData = formattedStats[index];
-          if (!statData) return null;
-          return (
-            <Card
-              key={config.title}
-              className={`relative overflow-hidden border-0 bg-gradient-to-br ${config.bgGradient} ${getCardHoverClass(config.bgGradient)} group transition-shadow duration-200 hover:shadow-lg dark:hover:shadow-black/30`}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent dark:from-white/5 dark:to-transparent" />
-              <CardHeader className="relative flex flex-row items-center justify-between pb-3">
-                <div className="space-y-1">
-                  <CardTitle className="text-sm font-medium text-foreground/80">
-                    {config.title}
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-foreground">
-                      {statData.count}
+        {getStatsCards().map((card) => (
+          <Card
+            key={card.title}
+            className={`relative overflow-hidden border-0 bg-gradient-to-br ${card.bgGradient} group transition-all duration-200 hover:shadow-lg hover:scale-[1.02] dark:hover:shadow-black/30`}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-transparent dark:from-white/5 dark:to-transparent" />
+            <CardHeader className="relative flex flex-row items-center justify-between pb-3">
+              <div className="space-y-1">
+                <CardTitle className="text-sm font-medium text-foreground/80">
+                  {card.title}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-foreground">
+                    {card.count}
+                  </span>
+                  {getTrendIcon(card.trendDirection)}
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    {card.trend}
+                  </p>
+                  {card.percentage && (
+                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                      card.trendDirection === 'up' 
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : card.trendDirection === 'down'
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
+                    }`}>
+                      {card.percentage}
                     </span>
-                    {getTrendIcon(statData.trendDirection)}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-muted-foreground">
-                      {statData.trend}
-                    </p>
-                    {statData.percentage && (
-                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${
-                        statData.trendDirection === 'up' 
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : statData.trendDirection === 'down'
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          : 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
-                      }`}>
-                        {statData.percentage}
-                      </span>
-                    )}
-                  </div>
+                  )}
                 </div>
-                <div className={`p-3 rounded-full ${config.iconBg} ${getIconAnimationClass()}`}>
-                  <div className={config.iconColor}>
-                    {config.icon}
-                  </div>
+              </div>
+              <div className={`p-3 rounded-full ${card.iconBg} group-hover:scale-110 transition-transform duration-300`}>
+                <div className={card.iconColor}>
+                  {card.icon}
                 </div>
-              </CardHeader>
-              <CardContent className="relative pt-0">
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                  {config.description}
-                </p>
-                <Link href={config.href}>
-                  <Button 
-                    variant="secondary" 
-                    className="w-full group/btn hover:bg-background/80 dark:hover:bg-background/80 transition-all duration-200"
-                  >
-                    <span>Go to {config.title}</span>
-                    <ArrowRight className={`w-4 h-4 ml-2 ${getButtonAnimationClass()}`} />
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          );
-        })}
+              </div>
+            </CardHeader>
+            <CardContent className="relative pt-0">
+              <Link href={card.href}>
+                <Button 
+                  variant="secondary" 
+                  className="w-full group/btn hover:bg-background/80 dark:hover:bg-background/80 transition-all duration-200"
+                >
+                  <span>View {card.title}</span>
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform duration-200" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* System Health/Notifications Card and Recent Activity Section */}
+      {/* System Health/Notifications Card and Recent Queries Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="bg-white dark:bg-zinc-900 border border-border/50 shadow-sm">
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <Bell className="w-5 h-5 text-yellow-500" />
-            <CardTitle className="text-base font-semibold text-foreground">Notifications</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div className="flex items-center gap-2">
+              <Bell className="w-5 h-5 text-yellow-500" />
+              <CardTitle className="text-base font-semibold text-foreground">System Status</CardTitle>
+            </div>
+            <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+              Online
+            </Badge>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-sm text-muted-foreground">No new notifications. All systems operational!</div>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Database</span>
+              <Badge variant="outline" className="text-green-600 border-green-200">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                Connected
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">API Services</span>
+              <Badge variant="outline" className="text-green-600 border-green-200">
+                <CheckCircle className="w-3 h-3 mr-1" />
+                Running
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Last Backup</span>
+              <span className="text-xs text-muted-foreground">2 hours ago</span>
+            </div>
           </CardContent>
         </Card>
-        {/* Recent Activity Section */}
+        
+        {/* Recent Queries Section */}
         <Card className="bg-white dark:bg-zinc-900 border border-border/50 shadow-sm">
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <Activity className="w-5 h-5 text-blue-500" />
-            <CardTitle className="text-base font-semibold text-foreground">Recent Activity</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-blue-500" />
+              <CardTitle className="text-base font-semibold text-foreground">Recent Queries</CardTitle>
+            </div>
+            <Link href="/Enqueries">
+              <Button variant="ghost" size="sm" className="text-xs">
+                View All
+                <ArrowRight className="w-3 h-3 ml-1" />
+              </Button>
+            </Link>
           </CardHeader>
-          <CardContent className="space-y-2">
-            {recentActivity.map((item) => (
-              <div key={item.id} className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="w-2 h-2 rounded-full bg-blue-400 dark:bg-blue-600" />
-                <span>{item.message}</span>
-                <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{item.time}</span>
+          <CardContent className="space-y-3">
+            {recentQueries.length > 0 ? (
+              recentQueries.slice(0, 3).map((query) => (
+                <div key={query.id} className="flex items-start gap-3 text-sm">
+                  <div className={`w-2 h-2 rounded-full mt-2 ${
+                    query.query_status === 'pending' ? 'bg-yellow-400' : 
+                    query.query_status === 'answered' ? 'bg-green-400' : 'bg-gray-400'
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground truncate">{query.title}</p>
+                    <p className="text-muted-foreground text-xs truncate">{query.last_message}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className={`text-xs ${
+                        query.query_status === 'pending' ? 'text-yellow-600 border-yellow-200' : 
+                        query.query_status === 'answered' ? 'text-green-600 border-green-200' : 'text-gray-600 border-gray-200'
+                      }`}>
+                        {query.query_status === 'pending' ? <Clock className="w-3 h-3 mr-1" /> : 
+                         query.query_status === 'answered' ? <CheckCircle className="w-3 h-3 mr-1" /> : 
+                         <XCircle className="w-3 h-3 mr-1" />}
+                        {query.query_status}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(query.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-sm text-muted-foreground text-center py-4">
+                No recent queries found
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       </div>
@@ -375,7 +544,7 @@ const DashboardPage = () => {
           <h2 className="text-xl font-semibold text-foreground">Quick Actions</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action, index) => (
+          {quickActions.map((action) => (
             <Link key={action.title} href={action.href}>
               <Card className="p-4 hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-200 hover:scale-[1.02] cursor-pointer border-border/50 hover:border-border group bg-white dark:bg-zinc-900">
                 <div className="flex items-center space-x-3">

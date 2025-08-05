@@ -3,7 +3,7 @@ import { CheckCircle, XCircle, Clock, Star, Shield } from "lucide-react";
 
 export const getStatusBadge = (status: string) => {
   switch (status) {
-    case "approved":
+    case "Approved":
       return (
         <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 border-0 flex items-center gap-1">
           <CheckCircle className="w-3 h-3" />
@@ -17,7 +17,7 @@ export const getStatusBadge = (status: string) => {
           Pending
         </Badge>
       );
-    case "rejected":
+    case "Rejected":
       return (
         <Badge className="bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 border-0 flex items-center gap-1">
           <XCircle className="w-3 h-3" />

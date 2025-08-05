@@ -9,14 +9,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Organizer } from "../types";
 
 interface ConfirmationDialogsProps {
   rejectDialog: {
     open: boolean;
     organizer: Organizer | null;
-    onConfirm: () => void;
+    onConfirm: (reason: string) => void;
     onCancel: () => void;
+    rejectionReason: string;
+    onReasonChange: (reason: string) => void;
   };
   restoreDialog: {
     open: boolean;
@@ -76,13 +80,27 @@ export function ConfirmationDialogs({
               </div>
             </div>
           )}
+          <div className="space-y-3">
+            <Label htmlFor="rejection-reason" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              Reason for rejection <span className="text-red-500">*</span>
+            </Label>
+            <Textarea
+              id="rejection-reason"
+              placeholder="Please provide a reason for rejecting this organizer..."
+              value={rejectDialog.rejectionReason}
+              onChange={(e) => rejectDialog.onReasonChange(e.target.value)}
+              className="min-h-[100px] resize-none border-slate-300 dark:border-slate-600 focus:border-red-500 dark:focus:border-red-400"
+              required
+            />
+          </div>
           <AlertDialogFooter className="gap-3">
             <AlertDialogCancel className="flex-1 h-12 border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={rejectDialog.onConfirm}
-              className="flex-1 h-12 bg-gradient-to-r from-red-600 to-rose-600 shadow-lg hover:from-red-700 hover:to-rose-700 hover:shadow-xl text-white rounded-xl"
+              onClick={() => rejectDialog.onConfirm(rejectDialog.rejectionReason)}
+              disabled={!rejectDialog.rejectionReason.trim()}
+              className="flex-1 h-12 bg-gradient-to-r from-red-600 to-rose-600 shadow-lg hover:from-red-700 hover:to-rose-700 hover:shadow-xl text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <XCircle className="mr-2 h-4 w-4" />
               Reject Organizer

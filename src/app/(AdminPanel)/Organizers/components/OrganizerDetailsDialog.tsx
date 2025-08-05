@@ -12,6 +12,7 @@ import {
   Mail,
   Globe,
   FileText,
+  Pause,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +34,7 @@ interface OrganizerDetailsDialogProps {
   onClose: () => void;
   onApprove: (organizer: Organizer) => void;
   onReject: (organizer: Organizer) => void;
+  onHold: (organizer: Organizer) => void;
   onDelete: (organizer: Organizer) => void;
   onRestore: (organizer: Organizer) => void;
 }
@@ -43,6 +45,7 @@ export function OrganizerDetailsDialog({
   onClose,
   onApprove,
   onReject,
+  onHold,
   onDelete,
   onRestore,
 }: OrganizerDetailsDialogProps) {
@@ -52,7 +55,7 @@ export function OrganizerDetailsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-5xl max-h-[95vh] overflow-hidden p-0 bg-white/95 dark:bg-slate-900/95 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl backdrop-blur-sm m-2 sm:m-4">
+      <DialogContent className="max-w-[95vw] sm:max-w-3xl lg:max-w-5xl max-h-[95vh]  p-0 bg-white/95 dark:bg-slate-900/95 border border-slate-200/50 dark:border-slate-700/50 shadow-2xl backdrop-blur-sm m-2 sm:m-4 overflow-y-auto">
         <div className="flex flex-col h-full">
           <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 border-b border-slate-200 dark:border-slate-700 p-4 md:p-6">
             <DialogHeader>
@@ -388,7 +391,56 @@ export function OrganizerDetailsDialog({
 
           <div className="border-t border-slate-200 dark:border-slate-700 p-4 md:p-6 bg-slate-50/80 dark:bg-slate-800/80">
             <div className="flex flex-col sm:flex-row gap-3 justify-end">
+              {/* Always show Contact button */}
+              <Button
+                variant="outline"
+                className="flex items-center justify-center gap-2 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-950/50 bg-transparent"
+                onClick={() => (window.location.href = `mailto:${organizer.email}`)}
+              >
+                <MessageSquare className="w-4 h-4" />
+                Contact
+              </Button>
+
+              {/* Status-based action buttons */}
               {organizer.status === "pending" && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="flex items-center justify-center gap-2 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-950/50 bg-transparent"
+                    onClick={() => onReject(organizer)}
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Reject
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex items-center justify-center gap-2 hover:bg-yellow-50 hover:border-yellow-200 dark:hover:bg-yellow-950/50 bg-transparent"
+                    onClick={() => onHold(organizer)}
+                  >
+                    <Pause className="w-4 h-4" />
+                    Hold
+                  </Button>
+                  <Button
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                    onClick={() => onApprove(organizer)}
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Approve
+                  </Button>
+                </>
+              )}
+
+              {organizer.status === "Rejected" && (
+                <Button
+                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                  onClick={() => onApprove(organizer)}
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Approve
+                </Button>
+              )}
+
+              {organizer.status === "Hold" && (
                 <>
                   <Button
                     variant="outline"
@@ -407,16 +459,18 @@ export function OrganizerDetailsDialog({
                   </Button>
                 </>
               )}
-              <Button
-                variant="outline"
-                className="flex items-center justify-center gap-2 hover:bg-blue-50 hover:border-blue-200 dark:hover:bg-blue-950/50 bg-transparent"
-                onClick={() => (window.location.href = `mailto:${organizer.email}`)}
-              >
-                <MessageSquare className="w-4 h-4" />
-                Contact
-              </Button>
 
+              {/* Delete/Restore actions based on active status */}
               {organizer.isActive ? (
+                <Button
+                  variant="outline"
+                  className="flex items-center justify-center gap-2 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-950/50 bg-transparent"
+                  onClick={() => onDelete(organizer)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </Button>
+              ) : (
                 <Button
                   variant="outline"
                   className="flex items-center justify-center gap-2 hover:bg-green-50 hover:border-green-200 dark:hover:bg-green-950/50 bg-transparent"
@@ -424,15 +478,6 @@ export function OrganizerDetailsDialog({
                 >
                   <RotateCcw className="w-4 h-4" />
                   Restore
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  className="flex items-center justify-center gap-2 hover:bg-red-50 hover:border-red-200 dark:hover:bg-red-950/50 bg-transparent"
-                  onClick={() => onDelete(organizer)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Deactivate
                 </Button>
               )}
             </div>

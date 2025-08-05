@@ -237,6 +237,8 @@ const navItems: NavItem[] = [
     href:'/Categories'
   },
   { label: 'Organizers', icon: UserCheck, href: '/Organizers' },
+    { label: 'Enqueries', icon: UserCheck, href: '/Enqueries' },
+    { label: 'UserQueries', icon: UserCheck, href: '/UserQueries' },
   // { label: 'Revenue', icon: LineChart, href: '/Revenue' },
 ];
 
@@ -373,7 +375,7 @@ function SidebarLink({
 }: SidebarLinkProps) {
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
+
         <Link
           href={href}
           className={`flex items-center p-3 rounded-lg text-sm font-medium transition-all group ${
@@ -385,7 +387,7 @@ function SidebarLink({
           <Icon className="w-5 h-5 mr-2 shrink-0" />
           {!collapsed && <span>{label}</span>}
         </Link>
-      </TooltipTrigger>
+ 
       {collapsed && <TooltipContent side="right">{label}</TooltipContent>}
     </Tooltip>
   );

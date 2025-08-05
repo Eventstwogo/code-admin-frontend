@@ -92,9 +92,9 @@ export default function AppHeader({ toggleSidebar }: Readonly<AppHeaderProps>) {
 
       {/* Right section */}
       <div className="flex items-center gap-6">
-        <div className="hidden sm:block">
+        {/* <div className="hidden sm:block">
           <SearchBarWithIcon />
-        </div>
+        </div> */}
 
         <button
           className="text-gray-600 hover:text-purple-500 transition cursor-pointer"
@@ -103,7 +103,7 @@ export default function AppHeader({ toggleSidebar }: Readonly<AppHeaderProps>) {
           <Bell className="text-5xl" />
         </button>
 
-        <ModeToggle />
+        {/* <ModeToggle /> */}
 
         <div className="flex items-center space-x-2">
           {loading ? (
