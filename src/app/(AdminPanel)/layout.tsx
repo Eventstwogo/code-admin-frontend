@@ -77,19 +77,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={`relative flex h-screen overflow-hidden    ${isMobile?'':'bg-[#111827]'}`}>
       {/* Mobile backdrop */}
-      {/* {isMobile && !collapsed && (
+      {isMobile && !collapsed && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          className="fixed inset-0 bg-black/40 z-40"
           onClick={() => setCollapsed(true)}
         />
-      )} */}
-
-      {isMobile && !collapsed && (
-  <div
-    className="fixed inset-0 bg-black/40 z-40"
-    onClick={() => setCollapsed(true)}
-  />
-)}
+      )}
 
       {/* Sidebar */}
       <AppSidebar

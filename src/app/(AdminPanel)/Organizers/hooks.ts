@@ -79,11 +79,11 @@ export const useOrganizerStats = (organizers: Organizer[]): OrganizerStats => {
   return useMemo(() => {
     const totalOrganizers = organizers.length;
     const approvedOrganizers = organizers.filter(
-      (v) => v.status === "approved"
+      (v) => v.status === "Approved"
     ).length;
-    const pendingOrganizers = organizers.filter((v) => v.status === "pending").length;
+    const pendingOrganizers = organizers.filter((v) => v.status === "Pending").length;
     const rejectedOrganizers = organizers.filter(
-      (v) => v.status === "rejected"
+      (v) => v.status === "Rejected"
     ).length;
 
     return {

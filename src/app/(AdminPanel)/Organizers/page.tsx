@@ -64,7 +64,7 @@ const OrganizerManagement = () => {
     setRejectionReason(""); // Reset rejection reason
     setRejectDialogOpen(true);
   };
-
+console.log(organizers);
   const confirmRejectOrganizer = async (reason: string) => {
     if (organizerToReject && reason.trim()) {
       const success = await handleRejectOrganizer(organizerToReject, reason);
@@ -212,9 +212,9 @@ const OrganizerManagement = () => {
       <div className="container mx-auto max-w-7xl p-4 lg:p-8 space-y-8">
         {/* Error State */}
         {error && <ErrorState error={error} />}
-
+  <h1 className="text-4xl font-bold  mb-10">Organizer Management</h1>
         {/* Page Header */}
-        <PageHeader onExport={handleExportOrganizers} />
+        {/* <PageHeader onExport={handleExportOrganizers} /> */}
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

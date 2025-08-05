@@ -12,8 +12,8 @@ interface JWTPayload {
 
 export const logoutUser = async () => {
   try {
-    const token = localStorage.getItem('token');
-    const refreshToken = localStorage.getItem('refreshToken');
+    const token = sessionStorage.getItem('token');
+    const refreshToken = sessionStorage.getItem('refreshToken');
     
     // First try the new logout endpoint with access token
     if (token) {
@@ -42,13 +42,13 @@ export const logoutUser = async () => {
     console.error('Error during logout process:', error);
     // Continue with logout even if server calls fail
   } finally {
-    // Clear local storage and update store
+    // Clear session storage and update store
     const { logout } = useStore.getState();
     logout();
-    localStorage.removeItem('id');
+    localStorage.removeItem('id'); // Keep this in localStorage as it's user data
     
     // Redirect to login page
-    window.location.href = '/';
+    window.location.href = '/login';
   }
 };
 
@@ -66,8 +66,8 @@ export const isTokenExpired = (token: string): boolean => {
 
 export const refreshTokenIfNeeded = async (): Promise<boolean> => {
   try {
-    const token = localStorage.getItem('token');
-    const refreshToken = localStorage.getItem('refreshToken');
+    const token = sessionStorage.getItem('token');
+    const refreshToken = sessionStorage.getItem('refreshToken');
     
     if (!token || !refreshToken) return false;
     
@@ -86,10 +86,10 @@ export const refreshTokenIfNeeded = async (): Promise<boolean> => {
       
       const { access_token, refresh_token: newRefreshToken, session_id } = response.data.data;
       
-      // Update tokens in localStorage
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('refreshToken', newRefreshToken);
-      localStorage.setItem('sessionId', session_id.toString());
+      // Update tokens in sessionStorage
+      sessionStorage.setItem('token', access_token);
+      sessionStorage.setItem('refreshToken', newRefreshToken);
+      sessionStorage.setItem('sessionId', session_id.toString());
       
       // Update the store with new token data
       const newDecoded = jwt.decode(access_token) as JWTPayload | null;

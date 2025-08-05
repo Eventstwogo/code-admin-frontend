@@ -132,9 +132,9 @@ const AdminEnquiriesPage = () => {
 
   return (
     <div className="p-6">
-      <Card>
+    
         <CardHeader>
-          <CardTitle className="text-2xl font-bold">User Enquiries</CardTitle>
+          <CardTitle className="text-3xl font-bold mb-10">User Enquiries</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -145,7 +145,7 @@ const AdminEnquiriesPage = () => {
             <DataTable columns={columns} data={enquiries} />
           )}
         </CardContent>
-      </Card>
+
     </div>
   )
 }
