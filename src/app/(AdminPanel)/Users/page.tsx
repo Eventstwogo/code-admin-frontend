@@ -228,7 +228,7 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setIsInitialLoading(true);
-      const response = await axiosInstance.get("/api/v1/admin/users/");
+      const response = await axiosInstance.get("/api/v1/admin/users");
       setUsers(response.data.data);
     } catch (error) {
       console.error("Failed to fetch users:", error);

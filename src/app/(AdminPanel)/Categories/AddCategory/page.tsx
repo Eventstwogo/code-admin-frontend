@@ -335,7 +335,7 @@ const CategoryCreation = () => {
 
       const endpoint = categoryId
         ? `/api/v1/category-items/${categoryId}`
-        : "/api/v1/categories/";
+        : "/api/v1/categories";
       const method = categoryId ? "put" : "post";
 
       const response = await axiosInstance[method]<ApiResponse<any>>(endpoint, formData, {

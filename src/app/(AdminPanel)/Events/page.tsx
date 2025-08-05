@@ -35,7 +35,7 @@ const CreateEventPage = () => {
   const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get('/api/v1/events/', {
+      const response = await axiosInstance.get('/api/v1/events', {
         timeout: 10000, // 10 second timeout
       });
       

@@ -38,7 +38,7 @@ export interface ApiResponse<T> {
 export const roleService = {
   // Create a new role
   create: async (roleName: string): Promise<ApiResponse<Role>> => {
-    const response = await axiosInstance.post('/api/v1/roles/', {
+    const response = await axiosInstance.post('/api/v1/roles', {
       role_name: roleName
     });
     return response.data;
@@ -47,7 +47,7 @@ export const roleService = {
   // Get roles by active status
   getAll: async (isActive?: boolean): Promise<ApiResponse<Role[]>> => {
     const params = isActive !== undefined ? { is_active: isActive } : {};
-    const response = await axiosInstance.get('/api/v1/roles/', { params });
+    const response = await axiosInstance.get('/api/v1/roles', { params });
     return response.data;
   },
 
@@ -88,7 +88,7 @@ export const roleService = {
 export const permissionService = {
   // Create a new permission
   create: async (permissionName: string): Promise<ApiResponse<Permission>> => {
-    const response = await axiosInstance.post('/api/v1/permissions/', {
+    const response = await axiosInstance.post('/api/v1/permissions', {
       permission_name: permissionName
     });
     return response.data;
@@ -97,7 +97,7 @@ export const permissionService = {
   // Get permissions by active status
   getAll: async (isActive?: boolean): Promise<ApiResponse<Permission[]>> => {
     const params = isActive !== undefined ? { is_active: isActive } : {};
-    const response = await axiosInstance.get('/api/v1/permissions/', { params });
+    const response = await axiosInstance.get('/api/v1/permissions', { params });
     return response.data;
   },
 
@@ -138,7 +138,7 @@ export const permissionService = {
 export const rolePermissionService = {
   // Create role-permission relationship
   create: async (roleId: string, permissionId: string): Promise<ApiResponse<RolePermission>> => {
-    const response = await axiosInstance.post('/api/v1/role-permissions/', {
+    const response = await axiosInstance.post('/api/v1/role-permissions', {
       role_id: roleId,
       permission_id: permissionId
     });
@@ -148,7 +148,7 @@ export const rolePermissionService = {
   // Get role-permission records by status
   getAll: async (status?: boolean): Promise<ApiResponse<RolePermission[]>> => {
     const params = status !== undefined ? { status } : {};
-    const response = await axiosInstance.get('/api/v1/role-permissions/', { params });
+    const response = await axiosInstance.get('/api/v1/role-permissions', { params });
     return response.data;
   },
 

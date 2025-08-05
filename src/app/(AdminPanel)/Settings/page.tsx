@@ -168,7 +168,7 @@ const SettingsForm = () => {
   const fetchSettings = async () => {
     try {
       setFetching(true);
-      const response = await axiosInstance.get("/api/v1/config/");
+      const response = await axiosInstance.get("/api/v1/config");
       
       if (response.data?.data) {
         const config = response.data.data;
@@ -233,7 +233,7 @@ const SettingsForm = () => {
     try {
       setLoading(true);
       
-      await axiosInstance.put("/api/v1/config/", formData, {
+      await axiosInstance.put("/api/v1/config", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       
