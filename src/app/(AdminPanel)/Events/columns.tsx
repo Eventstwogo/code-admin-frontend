@@ -269,7 +269,7 @@ export const createColumns = (
         <div className="flex items-center space-x-2">
           <Users className="h-4 w-4 text-gray-400 flex-shrink-0" />
           <span className="text-sm text-gray-600 line-clamp-1">
-            {event.organizer.username}
+            {event.extra_data?.organizer || event.organizer.username}
           </span>
         </div>
       ) : (
