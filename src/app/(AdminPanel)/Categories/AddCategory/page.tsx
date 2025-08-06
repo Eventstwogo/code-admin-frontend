@@ -33,7 +33,7 @@ import Image from 'next/image';
 
 // Constants
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_META_TITLE_LENGTH = 70;
 const MAX_META_DESCRIPTION_LENGTH = 160;

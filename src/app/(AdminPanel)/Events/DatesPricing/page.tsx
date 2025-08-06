@@ -1309,7 +1309,7 @@ const CreateEventDatesPricing = () => {
   const searchParams = useSearchParams();
   const { user } = useStore();
   const [eventDates, setEventDates] = useState<EventDate[]>([]);
-  const [currency, setCurrency] = useState("USD");
+  const [currency, setCurrency] = useState("AUD");
   const [isPublic, setIsPublic] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
   const [allowWaitlist, setAllowWaitlist] = useState(true);
@@ -2532,11 +2532,7 @@ const CreateEventDatesPricing = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="USD">USD ($)</SelectItem>
-                      <SelectItem value="EUR">EUR (€)</SelectItem>
-                      <SelectItem value="GBP">GBP (£)</SelectItem>
-                      <SelectItem value="INR">INR (₹)</SelectItem>
-                      <SelectItem value="CAD">CAD (C$)</SelectItem>
+                      <SelectItem value="AUD">AUD ($)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -2601,17 +2597,6 @@ const CreateEventDatesPricing = () => {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Step 1
             </Button>
-            {/* Preview API Data Button (for debugging) */}
-            {eventDates.length > 0 && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={previewApiData}
-                className="px-6 py-3 h-12 border-2 border-blue-300 text-blue-700 hover:bg-blue-50 hover:scale-105 transition-transform"
-              >
-                Preview API Data
-              </Button>
-            )}
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting}

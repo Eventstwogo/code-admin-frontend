@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
@@ -42,73 +42,90 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = useCallback(async (data: z.infer<typeof loginSchema>) => {
-    if (isSubmitting) return; // Prevent multiple simultaneous requests
-    
-    setIsSubmitting(true);
-    
-    try {
-      // Create form data for OAuth2-style request
-      const formData = new URLSearchParams();
-      formData.append('grant_type', 'password');
-      formData.append('username', data.email);
-      formData.append('password', data.password);
-      formData.append('scope', '');
-      formData.append('client_id', '');
-      formData.append('client_secret', '');
+  const onSubmit = useCallback(
+    async (data: z.infer<typeof loginSchema>) => {
+      if (isSubmitting) return; // Prevent multiple simultaneous requests
 
-      const response = await axiosInstance.post("/api/v1/admin/login", formData, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      });
-  
-      console.log('Login response:', response.data);
-      const statusCode = response.data.statusCode;
-      const userId = response.data.user_id;
-      
-      if (response.data.success) {
-        const { access_token, refresh_token, session_id } = response.data;
-        const { user_id } = response.data.data;
-        
-        // Use the updated login function with all tokens
-        login(access_token, refresh_token, session_id.toString());
-        localStorage.setItem('id', user_id);
-        
-        router.push('/Dashboard');
-        toast.success(response.data.message || 'Login Successful.');
-      } else if (statusCode === 201) {
-        router.push(`/ResetPassword?email=${encodeURIComponent(data.email)}`);
-        toast.success('Login Success. Please reset your password.');
-      }
-    } catch (error: unknown) {
-      console.log('Login error:', error);
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as { response: { status: number; data: any } };
-        const { status, data } = axiosError.response;
-        console.log(data)
-        if (status === 401) {
-          toast.error(data.message === "User not found." ? 'User Not Found.' : 'Invalid credentials or account issues.');
-        } else if (status === 403) {
-          toast.error(data.message || 'Access forbidden.');
-        } else if (status === 423) {
-          toast.error(data.message || 'Account locked.');
-        } else if (status === 404) {
-          toast.error('Account not found.');
-        } else {
-          toast.error('Unexpected error: ' + (data.detail?.message || data.message || 'An error occurred.'));
+      setIsSubmitting(true);
+
+      try {
+        // Create form data for OAuth2-style request
+        const formData = new URLSearchParams();
+        formData.append("grant_type", "password");
+        formData.append("username", data.email);
+        formData.append("password", data.password);
+        formData.append("scope", "");
+        formData.append("client_id", "");
+        formData.append("client_secret", "");
+
+        const response = await axiosInstance.post(
+          "/api/v1/admin/login",
+          formData,
+          {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+          }
+        );
+
+        console.log("Login response:", response.data);
+        const statusCode = response.data.statusCode;
+        const userId = response.data.user_id;
+
+        if (response.data.success) {
+          const { access_token, refresh_token, session_id } = response.data;
+          const { user_id } = response.data.data;
+
+          // Use the updated login function with all tokens
+          login(access_token, refresh_token, session_id.toString());
+          localStorage.setItem("id", user_id);
+
+          router.push("/Dashboard");
+          toast.success(response.data.message || "Login Successful.");
+        } else if (statusCode === 201) {
+          router.push(`/ResetPassword?email=${encodeURIComponent(data.email)}`);
+          toast.success("Login Success. Please reset your password.");
         }
-      } else {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error.';
-        toast.error('An error occurred: ' + errorMessage);
+      } catch (error: unknown) {
+        console.log("Login error:", error);
+        if (error && typeof error === "object" && "response" in error) {
+          const axiosError = error as {
+            response: { status: number; data: any };
+          };
+          const { status, data } = axiosError.response;
+          console.log(data);
+          if (status === 401) {
+            toast.error(
+              data.message === "User not found."
+                ? "User Not Found."
+                : "Invalid credentials or account issues."
+            );
+          } else if (status === 403) {
+            toast.error(data.message || "Access forbidden.");
+          } else if (status === 423) {
+            toast.error(data.message || "Account locked.");
+          } else if (status === 404) {
+            toast.error("Account not found.");
+          } else {
+            toast.error(
+              "Unexpected error: " +
+                (data.detail?.message || data.message || "An error occurred.")
+            );
+          }
+        } else {
+          const errorMessage =
+            error instanceof Error ? error.message : "Unknown error.";
+          toast.error("An error occurred: " + errorMessage);
+        }
+      } finally {
+        setIsSubmitting(false);
       }
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [login, router, isSubmitting]);
+    },
+    [login, router, isSubmitting]
+  );
 
   const togglePasswordVisibility = useCallback(() => {
-    setShowPassword(prev => !prev);
+    setShowPassword((prev) => !prev);
   }, []);
 
   return (
@@ -147,12 +164,18 @@ export default function LoginPage() {
               height={80}
               className="object-contain drop-shadow-lg"
             />
-            <span className="text-lg font-semibold text-gray-700 dark:text-gray-200">Welcome to Events2Go Admin</span>
-            <span className="text-sm text-gray-500 dark:text-gray-400">Sign in to manage your events</span>
+            <span className="text-lg font-semibold text-gray-700 dark:text-gray-200">
+              Welcome to Events2Go Admin
+            </span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              Sign in to manage your events
+            </span>
           </div>
-          <h2 className="text-3xl font-bold mb-2 text-center text-indigo-700 dark:text-indigo-300">Login</h2>
+          <h2 className="text-3xl font-bold mb-2 text-center text-indigo-700 dark:text-indigo-300">
+            Login
+          </h2>
           {/* Email */}
-          <div className="mb-2">
+          <div className="mb-4">
             <Label htmlFor="email" className="text-sm mb-1 block">
               Email
             </Label>
@@ -162,16 +185,21 @@ export default function LoginPage() {
                 type="email"
                 {...register("email")}
                 disabled={isSubmitting}
-                className="pl-10 focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600 transition-all"
+                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-500 
+                 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                placeholder="Enter your email"
               />
-              <User className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 dark:text-indigo-300" />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500" />
             </div>
             {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.email.message}
+              </p>
             )}
           </div>
+
           {/* Password */}
-          <div className="mb-2">
+          <div className="mb-4">
             <Label htmlFor="password" className="text-sm mb-1 block">
               Password
             </Label>
@@ -181,13 +209,15 @@ export default function LoginPage() {
                 type={showPassword ? "text" : "password"}
                 {...register("password")}
                 disabled={isSubmitting}
-                className="pl-10 pr-10 focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600 transition-all"
+                className="w-full pl-10 pr-10 py-3 rounded-lg border border-gray-300 bg-white text-gray-900 placeholder-gray-500 
+                 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                placeholder="Enter your password"
               />
-              <Lock className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 dark:text-indigo-300" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500" />
               <button
                 type="button"
                 onClick={togglePasswordVisibility}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-400 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-500 hover:text-indigo-600 transition-colors"
                 tabIndex={-1}
               >
                 {showPassword ? (
@@ -198,7 +228,9 @@ export default function LoginPage() {
               </button>
             </div>
             {errors.password && (
-              <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.password.message}
+              </p>
             )}
           </div>
           {/* Submit Button */}
@@ -222,4 +254,4 @@ export default function LoginPage() {
       </motion.div>
     </div>
   );
-} 
+}
