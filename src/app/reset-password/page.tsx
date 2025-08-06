@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import BackgroundImage from "@/components/BackgroundImage";
 import Image from 'next/image';
+import { cn } from "@/lib/utils";
 
 const passwordSchema = z
   .string()
@@ -30,7 +31,7 @@ const resetPasswordSchema = z.object({
 export default function ResetPasswordWithTokenPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get("email") || "";
+  const email = decodeURIComponent(searchParams.get("email") || "");
   const token = searchParams.get("token") || "";
   const [submitting, setSubmitting] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -114,7 +115,7 @@ export default function ResetPasswordWithTokenPage() {
         </div>
         <h2 className="text-2xl font-bold mb-2 text-center text-indigo-700 dark:text-indigo-300">Reset Password</h2>
         <div className="mb-2">
-          <Label htmlFor="new_password" className="text-sm mb-1 block">
+          <Label htmlFor="new_password" className="text-sm mb-1 block text-gray-700 dark:text-gray-200">
             New Password
           </Label>
           <div className="relative">
@@ -122,50 +123,86 @@ export default function ResetPasswordWithTokenPage() {
               id="new_password"
               type={showNewPassword ? "text" : "password"}
               {...register("new_password")}
-              className="pl-10 pr-10 focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600 transition-all"
+              className={cn(
+                "pl-10 pr-10 w-full rounded-md border border-gray-300 dark:border-gray-700",
+                "bg-white text-gray-900 placeholder-gray-400",
+                "dark:bg-gray-900 dark:text-white dark:placeholder-gray-500",
+                "focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600",
+                "transition-all"
+              )}
+              placeholder="Enter your password"
               disabled={submitting}
             />
-            <svg className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 dark:text-indigo-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0-1.104.896-2 2-2s2 .896 2 2v1h-4v-1zm-2 4h8v2a2 2 0 01-2 2H8a2 2 0 01-2-2v-2h4zm0-4V9a4 4 0 118 0v2" /></svg>
+            <svg
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500 dark:text-indigo-300"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0-1.104.896-2 2-2s2 .896 2 2v1h-4v-1zm-2 4h8v2a2 2 0 01-2 2H8a2 2 0 01-2-2v-2h4zm0-4V9a4 4 0 118 0v2" />
+            </svg>
             <button
               type="button"
               onClick={toggleNewPasswordVisibility}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-400 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-500 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               tabIndex={-1}
             >
               {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
           </div>
+
           {/* Password requirements checklist */}
           <ul className="mt-2 mb-1 space-y-1 text-xs">
             {requirements.map((req, idx) => (
-              <li key={idx} className={req.met ? "text-green-600 dark:text-green-400 flex items-center" : "text-gray-500 dark:text-gray-400 flex items-center"}>
-                <svg className={req.met ? "h-4 w-4 mr-1 text-green-500" : "h-4 w-4 mr-1 text-gray-400"} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              <li
+                key={idx}
+                className={cn(
+                  "flex items-center",
+                  req.met ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"
+                )}
+              >
+                <svg
+                  className={cn(
+                    "h-4 w-4 mr-1",
+                    req.met ? "text-green-500" : "text-gray-400"
+                  )}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
                 {req.label}
               </li>
             ))}
           </ul>
+
           {/* Password strength meter */}
           <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full mt-2">
             <div
-              className={`h-2 rounded-full transition-all duration-300 ${
+              className={cn(
+                "h-2 rounded-full transition-all duration-300",
                 allMet
-                  ? 'bg-green-500 w-full'
+                  ? "bg-green-500 w-full"
                   : requirements.filter(r => r.met).length >= 3
-                  ? 'bg-blue-400 w-4/5'
+                  ? "bg-blue-400 w-4/5"
                   : requirements.filter(r => r.met).length === 2
-                  ? 'bg-yellow-400 w-3/5'
+                  ? "bg-yellow-400 w-3/5"
                   : requirements.filter(r => r.met).length === 1
-                  ? 'bg-red-400 w-1/5'
-                  : ''
-              }`}
+                  ? "bg-red-400 w-1/5"
+                  : "w-0"
+              )}
             />
           </div>
+
           {errors.new_password && (
             <p className="text-red-500 text-sm mt-1">{errors.new_password.message}</p>
           )}
         </div>
         <div className="mb-2">
-          <Label htmlFor="confirm_password" className="text-sm mb-1 block">
+          <Label htmlFor="confirm_password" className="text-sm mb-1 block text-gray-700 dark:text-gray-200">
             Confirm Password
           </Label>
           <div className="relative">
@@ -173,19 +210,35 @@ export default function ResetPasswordWithTokenPage() {
               id="confirm_password"
               type={showConfirmPassword ? "text" : "password"}
               {...register("confirm_password")}
-              className="pl-10 pr-10 focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600 transition-all"
+              placeholder="Confirm your password"
+              className={cn(
+                "pl-10 pr-10 w-full rounded-md border border-gray-300 dark:border-gray-700",
+                "bg-white text-gray-900 placeholder-gray-400",
+                "dark:bg-gray-900 dark:text-white dark:placeholder-gray-500",
+                "focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600",
+                "transition-all"
+              )}
               disabled={submitting}
             />
-            <svg className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 dark:text-indigo-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+            <svg
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500 dark:text-indigo-300"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
             <button
               type="button"
               onClick={toggleConfirmPasswordVisibility}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-400 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-indigo-500 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
               tabIndex={-1}
             >
               {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
           </div>
+
           {/* Password match feedback */}
           {confirmPassword && !passwordsMatch && (
             <p className="text-red-500 text-xs mt-1">Passwords do not match</p>
@@ -193,6 +246,8 @@ export default function ResetPasswordWithTokenPage() {
           {confirmPassword && passwordsMatch && (
             <p className="text-green-600 dark:text-green-400 text-xs mt-1">Passwords match</p>
           )}
+
+          {/* Validation error message */}
           {errors.confirm_password && (
             <p className="text-red-500 text-sm mt-1">{errors.confirm_password.message}</p>
           )}

@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import BackgroundImage from "@/components/BackgroundImage";
 import Link from "next/link";
 import { useMemo } from "react";
+import { cn } from "@/lib/utils";
 
 export default function ResetPasswordPage() {
   const [newPassword, setNewPassword] = useState("");
@@ -122,70 +123,111 @@ export default function ResetPasswordPage() {
         <Separator />
         <div className="space-y-4">
           {/* New Password Field */}
-          <div className="relative">
-            <Label htmlFor="new-password" className="mb-2">
+          <div className="relative mb-4">
+            <Label htmlFor="new-password" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
               New Password
             </Label>
+
             <Input
               type={showNewPassword ? "text" : "password"}
               id="new-password"
               placeholder="Enter new password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="pr-10"
+              className={cn(
+                "w-full pr-10 pl-3 py-2 rounded-md border",
+                "text-gray-900 placeholder-gray-400 bg-white border-gray-300",
+                "dark:text-white dark:placeholder-gray-500 dark:bg-gray-900 dark:border-gray-700",
+                "focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600"
+              )}
             />
+
             <button
               type="button"
-              className="absolute right-3 top-8 text-indigo-400 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400"
+              className="absolute right-3 top-9 text-indigo-500 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-400"
               onClick={toggleNewPasswordVisibility}
             >
               {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
-            {/* Password requirements checklist */}
-            <ul className="mt-2 mb-1 space-y-1 text-xs">
+
+            {/* Password Requirements */}
+            <ul className="mt-2 space-y-1 text-xs">
               {passwordRequirements.map((req, idx) => (
-                <li key={idx} className={req.met ? "text-green-600 dark:text-green-400 flex items-center" : "text-gray-500 dark:text-gray-400 flex items-center"}>
-                  <svg className={req.met ? "h-4 w-4 mr-1 text-green-500" : "h-4 w-4 mr-1 text-gray-400"} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                <li
+                  key={idx}
+                  className={`flex items-center ${
+                    req.met
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  <svg
+                    className={`h-4 w-4 mr-1 ${
+                      req.met ? "text-green-500" : "text-gray-400"
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
                   {req.label}
                 </li>
               ))}
             </ul>
-            {/* Password strength meter */}
+
+            {/* Password Strength Meter */}
             <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full mt-2">
               <div
-                className={`h-2 rounded-full transition-all duration-300 ${
+                className={cn(
+                  "h-2 rounded-full transition-all duration-300",
                   allMet
-                    ? 'bg-green-500 w-full'
+                    ? "bg-green-500 w-full"
                     : passwordStrength >= 3
-                    ? 'bg-blue-400 w-4/5'
+                    ? "bg-blue-400 w-4/5"
                     : passwordStrength === 2
-                    ? 'bg-yellow-400 w-3/5'
+                    ? "bg-yellow-400 w-3/5"
                     : passwordStrength === 1
-                    ? 'bg-red-400 w-1/5'
-                    : ''
-                }`}
+                    ? "bg-red-400 w-1/5"
+                    : "w-0"
+                )}
               />
             </div>
           </div>
           {/* Confirm Password Field */}
-          <div className="relative">
-            <Label htmlFor="confirm-password" className="mb-2">
+          <div className="relative mb-4">
+            <Label
+              htmlFor="confirm-password"
+              className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200"
+            >
               Confirm Password
             </Label>
+
             <Input
               type={showConfirmPassword ? "text" : "password"}
               id="confirm-password"
               placeholder="Re-enter new password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="pr-10"
+              className={cn(
+                "w-full pr-10 pl-3 py-2 rounded-md border",
+                "text-gray-900 placeholder-gray-400 bg-white border-gray-300",
+                "dark:text-white dark:placeholder-gray-500 dark:bg-gray-900 dark:border-gray-700",
+                "focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600"
+              )}
             />
+
             <button
               type="button"
-              className="absolute right-3 top-8 text-indigo-400 dark:text-indigo-300 hover:text-indigo-600 dark:hover:text-indigo-400"
+              className="absolute right-3 top-9 text-indigo-500 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-400"
               onClick={toggleConfirmPasswordVisibility}
             >
-              {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              {showConfirmPassword ? (
+                <EyeOff className="h-5 w-5" />
+              ) : (
+                <Eye className="h-5 w-5" />
+              )}
             </button>
           </div>
           {/* Error Message */}

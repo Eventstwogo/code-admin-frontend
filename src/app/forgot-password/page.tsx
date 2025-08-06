@@ -11,6 +11,7 @@ import axiosInstance from "@/lib/axiosInstance";
 import { toast } from "sonner";
 import BackgroundImage from "@/components/BackgroundImage";
 import Image from 'next/image';
+import { cn } from "@/lib/utils";
 
 const forgotPasswordSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email format"),
@@ -62,7 +63,7 @@ export default function ForgotPasswordPage() {
         ) : (
           <>
             <div className="mb-2">
-              <Label htmlFor="email" className="text-sm mb-1 block">
+              <Label htmlFor="email" className="text-sm mb-1 block text-gray-700 dark:text-gray-200">
                 Email
               </Label>
               <div className="relative">
@@ -70,10 +71,25 @@ export default function ForgotPasswordPage() {
                   id="email"
                   type="email"
                   {...register("email")}
-                  className="pl-10 focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-600 transition-all"
+                  className={cn(
+                    "pl-10 w-full rounded-md border border-gray-300 dark:border-gray-700",
+                    "bg-white text-gray-900 placeholder-gray-400",
+                    "dark:bg-gray-900 dark:text-white dark:placeholder-gray-500",
+                    "focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600",
+                    "transition-all"
+                  )}
+                  placeholder="Enter your email"
                   disabled={isSubmitting || submitted}
                 />
-                <svg className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-400 dark:text-indigo-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16 12H8m8 0a4 4 0 11-8 0 4 4 0 018 0zm8 0a8 8 0 11-16 0 8 8 0 0116 0z" /></svg>
+                <svg
+                  className="absolute left-2 top-1/2 -translate-y-1/2 h-5 w-5 text-indigo-500 dark:text-indigo-300"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16 12H8m8 0a4 4 0 11-8 0 4 4 0 018 0zm8 0a8 8 0 11-16 0 8 8 0 0116 0z" />
+                </svg>
               </div>
               {errors.email && (
                 <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
