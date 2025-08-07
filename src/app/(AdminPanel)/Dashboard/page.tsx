@@ -35,15 +35,83 @@ import {
 } from "lucide-react";
 
 // Interfaces for API data
+interface DashboardApiResponse {
+  statusCode: number;
+  message: string;
+  timestamp: string;
+  method: string;
+  path: string;
+  data: {
+    categories: {
+      total: number;
+      added_this_month: number;
+      percentage_change: number;
+      trend: string;
+    };
+    admin_users: {
+      total: number;
+      added_this_week: number;
+      percentage_change: number;
+      trend: string;
+    };
+    users: {
+      total: number;
+      added_this_week: number;
+      percentage_change: number;
+      trend: string;
+    };
+    revenue: {
+      current_month: number;
+      last_month: number;
+      difference: number;
+      percentage_change: number;
+      trend: string;
+      note: string;
+    };
+    settings: {
+      total: number;
+      changes_this_week: number;
+      percentage_change: number;
+      trend: string;
+    };
+    generated_at: string;
+  };
+}
+
 interface DashboardStats {
-  totalUsers: number;
-  totalOrganizers: number;
-  totalEvents: number;
-  totalQueries: number;
-  pendingQueries: number;
-  resolvedQueries: number;
-  totalRevenue: number;
-  activeEvents: number;
+  categories: {
+    total: number;
+    added_this_month: number;
+    percentage_change: number;
+    trend: string;
+  };
+  adminUsers: {
+    total: number;
+    added_this_week: number;
+    percentage_change: number;
+    trend: string;
+  };
+  users: {
+    total: number;
+    added_this_week: number;
+    percentage_change: number;
+    trend: string;
+  };
+  revenue: {
+    current_month: number;
+    last_month: number;
+    difference: number;
+    percentage_change: number;
+    trend: string;
+    note: string;
+  };
+  settings: {
+    total: number;
+    changes_this_week: number;
+    percentage_change: number;
+    trend: string;
+  };
+  generated_at: string;
 }
 
 interface RecentQuery {
@@ -82,29 +150,29 @@ const useDashboardData = () => {
       setIsLoading(true);
       setError(null);
 
-      // Fetch multiple endpoints in parallel
-      const [queriesResponse] = await Promise.all([
-        axiosInstance.get('/api/v1/organizers/queries/all/by-status?limit=5'),
-        // Add more API calls here as needed
+      // Fetch dashboard data and queries in parallel
+      const [dashboardResponse, queriesResponse] = await Promise.all([
+        axiosInstance.get<DashboardApiResponse>('/api/v1/admin/dashboard'),
+        axiosInstance.get('/api/v1/organizers/queries/all/by-status?limit=5').catch(() => ({ data: { data: { queries: [] } } }))
       ]);
 
-      // Process queries data
-      const queriesData = queriesResponse.data.data;
-      setRecentQueries(queriesData.queries || []);
-
-      // Calculate stats from the data
-      const mockStats: DashboardStats = {
-        totalUsers: 1250,
-        totalOrganizers: 85,
-        totalEvents: 42,
-        totalQueries: queriesData.pagination?.total_items || 0,
-        pendingQueries: queriesData.queries?.filter((q: RecentQuery) => q.query_status === 'pending').length || 0,
-        resolvedQueries: queriesData.queries?.filter((q: RecentQuery) => q.query_status === 'answered').length || 0,
-        totalRevenue: 125000,
-        activeEvents: 15,
+      // Process dashboard data
+      const dashboardData = dashboardResponse.data.data;
+      const transformedStats: DashboardStats = {
+        categories: dashboardData.categories,
+        adminUsers: dashboardData.admin_users,
+        users: dashboardData.users,
+        revenue: dashboardData.revenue,
+        settings: dashboardData.settings,
+        generated_at: dashboardData.generated_at,
       };
 
-      setStats(mockStats);
+      setStats(transformedStats);
+
+      // Process queries data (optional, fallback if API fails)
+      const queriesData = queriesResponse.data?.data;
+      setRecentQueries(queriesData?.queries || []);
+
     } catch (err) {
       console.error('Dashboard data fetch error:', err);
       if (err instanceof AxiosError) {
@@ -235,6 +303,29 @@ const DashboardPage = () => {
     }
   };
 
+  const getTrendDirection = (trend: string): 'up' | 'down' | 'neutral' => {
+    switch (trend.toLowerCase()) {
+      case 'up':
+        return 'up';
+      case 'down':
+        return 'down';
+      case 'stable':
+        return 'neutral';
+      default:
+        return 'neutral';
+    }
+  };
+
+  const formatPercentageChange = (percentage: number): string => {
+    if (percentage > 0) {
+      return `+${percentage}%`;
+    } else if (percentage < 0) {
+      return `${percentage}%`;
+    } else {
+      return '0%';
+    }
+  };
+
   // Generate stats cards with real data
   const getStatsCards = (): StatsCard[] => {
     if (!stats) return [];
@@ -242,10 +333,10 @@ const DashboardPage = () => {
     return [
       {
         title: "Total Users",
-        count: stats.totalUsers.toLocaleString(),
-        trend: "+12% from last month",
-        trendDirection: 'up',
-        percentage: "+12%",
+        count: stats.users.total.toLocaleString(),
+        trend: `+${stats.users.added_this_week} this week`,
+        trendDirection: getTrendDirection(stats.users.trend),
+        percentage: formatPercentageChange(stats.users.percentage_change),
         icon: <Users className="w-6 h-6" />,
         href: "/Users",
         gradient: "from-blue-500 to-indigo-600",
@@ -254,39 +345,39 @@ const DashboardPage = () => {
         iconColor: "text-blue-600 dark:text-blue-400",
       },
       {
-        title: "Organizers",
-        count: stats.totalOrganizers.toString(),
-        trend: "+5 this week",
-        trendDirection: 'up',
-        percentage: "+6.3%",
+        title: "Admin Users",
+        count: stats.adminUsers.total.toString(),
+        trend: `+${stats.adminUsers.added_this_week} this week`,
+        trendDirection: getTrendDirection(stats.adminUsers.trend),
+        percentage: formatPercentageChange(stats.adminUsers.percentage_change),
         icon: <Building2 className="w-6 h-6" />,
-        href: "/Organizers",
+        href: "/AdminUsers",
         gradient: "from-green-500 to-emerald-600",
         bgGradient: "from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20",
         iconBg: "bg-green-100 dark:bg-green-900/30",
         iconColor: "text-green-600 dark:text-green-400",
       },
       {
-        title: "Total Events",
-        count: stats.totalEvents.toString(),
-        trend: "+8 this month",
-        trendDirection: 'up',
-        percentage: "+23.5%",
-        icon: <CalendarCheck className="w-6 h-6" />,
-        href: "/Events",
+        title: "Categories",
+        count: stats.categories.total.toString(),
+        trend: `+${stats.categories.added_this_month} this month`,
+        trendDirection: getTrendDirection(stats.categories.trend),
+        percentage: formatPercentageChange(stats.categories.percentage_change),
+        icon: <LayoutGrid className="w-6 h-6" />,
+        href: "/Categories",
         gradient: "from-purple-500 to-violet-600",
         bgGradient: "from-purple-50 to-violet-50 dark:from-purple-950/20 dark:to-violet-950/20",
         iconBg: "bg-purple-100 dark:bg-purple-900/30",
         iconColor: "text-purple-600 dark:text-purple-400",
       },
       {
-        title: "Queries",
-        count: stats.totalQueries.toString(),
-        trend: `${stats.pendingQueries} pending`,
-        trendDirection: stats.pendingQueries > 5 ? 'down' : 'up',
-        percentage: `${stats.resolvedQueries} resolved`,
-        icon: <MessageSquare className="w-6 h-6" />,
-        href: "/Enqueries",
+        title: "Revenue",
+        count: `$${stats.revenue.current_month.toLocaleString()}`,
+        trend: `$${stats.revenue.difference.toLocaleString()} vs last month`,
+        trendDirection: getTrendDirection(stats.revenue.trend),
+        percentage: formatPercentageChange(stats.revenue.percentage_change),
+        icon: <ShoppingCart className="w-6 h-6" />,
+        href: "/Revenue",
         gradient: "from-yellow-500 to-orange-600",
         bgGradient: "from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20",
         iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
@@ -295,33 +386,33 @@ const DashboardPage = () => {
     ];
   };
 
-  const quickActions = [
+  const getQuickActions = () => [
     {
       title: "Categories",
       icon: <LayoutGrid className="w-5 h-5" />,
-      description: "Manage categories",
+      description: `${stats?.categories.total || 0} total`,
       href: "/Categories",
       color: "text-rose-600 dark:text-rose-400",
     },
     {
       title: "Revenue",
       icon: <ShoppingCart className="w-5 h-5" />,
-      description: "View revenue",
+      description: `$${stats?.revenue.current_month.toLocaleString() || 0} this month`,
       href: "/Revenue",
       color: "text-cyan-600 dark:text-cyan-400",
     },
     {
-      title: "Roles",
+      title: "Settings",
       icon: <Settings className="w-5 h-5" />,
-      description: "Manage roles",
-      href: "/Roles",
+      description: `${stats?.settings.total || 0} configurations`,
+      href: "/Settings",
       color: "text-amber-600 dark:text-amber-400",
     },
     {
-      title: "Sessions",
-      icon: <Activity className="w-5 h-5" />,
-      description: "Active sessions",
-      href: "/sessions",
+      title: "Admin Users",
+      icon: <UserIcon className="w-5 h-5" />,
+      description: `${stats?.adminUsers.total || 0} active`,
+      href: "/AdminUsers",
       color: "text-teal-600 dark:text-teal-400",
     },
   ];
@@ -544,7 +635,7 @@ const DashboardPage = () => {
           <h2 className="text-xl font-semibold text-foreground">Quick Actions</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickActions.map((action) => (
+          {getQuickActions().map((action) => (
             <Link key={action.title} href={action.href}>
               <Card className="p-4 hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-200 hover:scale-[1.02] cursor-pointer border-border/50 hover:border-border group bg-white dark:bg-zinc-900">
                 <div className="flex items-center space-x-3">
@@ -572,10 +663,15 @@ const DashboardPage = () => {
       {/* Footer Section */}
       <div className="pt-8 border-t border-border/50">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-center sm:text-left">
+          <div className="text-center sm:text-left space-y-1">
             <p className="text-sm text-muted-foreground">
               Last updated: {formattedDate}
             </p>
+            {stats?.revenue.note && (
+              <p className="text-xs text-muted-foreground/80 italic">
+                Note: {stats.revenue.note}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />

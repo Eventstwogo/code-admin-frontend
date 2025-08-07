@@ -7,11 +7,7 @@ import useStore from "@/lib/Zustand";
 import { useRouter } from "next/navigation";
 
 // Feature icons component
-const FeatureIcon = ({ children }: { children: React.ReactNode }) => (
-  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-lg flex items-center justify-center text-white text-sm font-bold shadow-md">
-    {children}
-  </div>
-);
+
 
 export default function Home() {
   const { isAuthenticated } = useStore();

@@ -695,11 +695,11 @@ const BasicInfoPage = () => {
                   {/* Organizer Information */}
                   <div className="space-y-2">
                     <Label htmlFor="organizer" className="text-sm font-medium text-gray-700">
-                      Event Organizer Details *
+                      Event Organizer Name *
                     </Label>
                     <Textarea
                       id="organizer"
-                      placeholder="Organization name, contact person, phone number, email, website, social media handles, etc."
+                      placeholder="Organization name"
                       rows={4}
                       {...register("organizer")}
                       className={cn(
