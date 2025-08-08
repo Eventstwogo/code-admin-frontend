@@ -682,7 +682,7 @@ const DashboardPage = () => {
     [stats]
   );
 
-  const formattedDate = new Date().toLocaleDateString("en-US", {
+  const formattedDate = new Date().toLocaleDateString("en-AU", {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -975,7 +975,7 @@ const DashboardPage = () => {
                     >
                       <div className="flex items-center justify-between text-sm mb-2">
                         <span className="text-muted-foreground font-medium">
-                          {new Date(day.date).toLocaleDateString("en-US", {
+                          {new Date(day.date).toLocaleDateString("en-AU", {
                             month: "short",
                             day: "numeric",
                           })}

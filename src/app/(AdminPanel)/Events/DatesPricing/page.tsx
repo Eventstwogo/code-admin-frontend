@@ -50,7 +50,7 @@
 //   const searchParams = useSearchParams();
 //   const { userId } = useStore();
 //   const [eventDates, setEventDates] = useState<EventDate[]>([]);
-//   const [currency, setCurrency] = useState("USD");
+//   const [currency, setCurrency] = useState("AUD");
 //   const [isPublic, setIsPublic] = useState(true);
 //   const [isFeatured, setIsFeatured] = useState(false);
 //   const [allowWaitlist, setAllowWaitlist] = useState(true);
@@ -848,7 +848,7 @@
 //                                   className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
 //                                 />
 //                                 <span className="text-sm font-medium">
-//                                   {date.date ? new Date(date.date).toLocaleDateString('en-US', {
+//                                   {date.date ? new Date(date.date).toLocaleDateString('en-AU', {
 //                                     weekday: 'short',
 //                                     month: 'short', 
 //                                     day: 'numeric'
@@ -921,7 +921,7 @@
 //                         Event Date {dateIndex + 1}
 //                         {eventDate.date && (
 //                           <span className="ml-2 text-blue-600 font-semibold">
-//                             ({new Date(eventDate.date).toLocaleDateString('en-US', { 
+//                             ({new Date(eventDate.date).toLocaleDateString('en-AU', { 
 //                               weekday: 'short', 
 //                               month: 'short', 
 //                               day: 'numeric' 
@@ -1150,7 +1150,7 @@
 //                       <SelectValue />
 //                     </SelectTrigger>
 //                     <SelectContent>
-//                       <SelectItem value="USD">USD ($)</SelectItem>
+//                       <SelectItem value="AUD">AUD ($)</SelectItem>
 //                       <SelectItem value="EUR">EUR (€)</SelectItem>
 //                       <SelectItem value="GBP">GBP (£)</SelectItem>
 //                       <SelectItem value="INR">INR (₹)</SelectItem>
@@ -2230,7 +2230,7 @@ const CreateEventDatesPricing = () => {
                                   className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                                 />
                                 <span className="text-sm font-medium">
-                                  {date.date ? new Date(date.date).toLocaleDateString('en-US', {
+                                  {date.date ? new Date(date.date).toLocaleDateString('en-AU', {
                                     weekday: 'short',
                                     month: 'short', 
                                     day: 'numeric'
@@ -2303,7 +2303,7 @@ const CreateEventDatesPricing = () => {
                         Event Date {dateIndex + 1}
                         {eventDate.date && (
                           <span className="ml-2 text-blue-600 font-semibold">
-                            ({new Date(eventDate.date).toLocaleDateString('en-US', { 
+                            ({new Date(eventDate.date).toLocaleDateString('en-AU', { 
                               weekday: 'short', 
                               month: 'short', 
                               day: 'numeric' 

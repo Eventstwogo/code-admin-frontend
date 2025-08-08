@@ -116,7 +116,7 @@ const EventViewPage = () => {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString('en-AU', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -125,15 +125,15 @@ const EventViewPage = () => {
   };
 
   const formatTime = (timeString: string) => {
-    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
+    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-AU', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
     });
   };
 
-  // const formatCurrency = (amount: number, currency: string = 'USD') => {
-  //   return new Intl.NumberFormat('en-US', {
+  // const formatCurrency = (amount: number, currency: string = 'AUD') => {
+  //   return new Intl.NumberFormat('en-AU', {
   //     style: 'currency',
   //     currency: currency
   //   }).format(amount);

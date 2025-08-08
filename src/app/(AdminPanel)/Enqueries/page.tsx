@@ -420,7 +420,7 @@ export default function AdminEnquiryManagement() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    return new Date(dateString).toLocaleDateString("en-AU", {
       month: "numeric",
       day: "numeric",
       year: "numeric",
@@ -428,7 +428,7 @@ export default function AdminEnquiryManagement() {
   }
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    return new Date(dateString).toLocaleDateString("en-AU", {
       month: "numeric",
       day: "numeric",
       year: "numeric",

@@ -252,7 +252,7 @@ export default function AppUsersPage() {
   // Format date helper
   const formatDate = (dateString: string) => {
     try {
-      return new Date(dateString).toLocaleDateString("en-US", {
+      return new Date(dateString).toLocaleDateString("en-AU", {
         year: "numeric",
         month: "short",
         day: "numeric",
