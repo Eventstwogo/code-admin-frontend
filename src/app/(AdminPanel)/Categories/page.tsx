@@ -280,12 +280,30 @@ const CategoriesTable = () => {
   const columns = React.useMemo<ColumnDef<any>[]>(() => [
     {
       accessorKey: 'id',
-      header: 'ID',
-      cell: ({ row }) => (
-        <span className="text-muted-foreground font-mono text-xs">
-          {row.original.id}
-        </span>
-      ),
+      header: 'S.No',
+      cell: ({ row }) => {
+        const isCategory = row.original.type === 'category';
+        
+        if (isCategory) {
+          // Count categories only
+          const categoryIndex = data.slice(0, row.index + 1)
+            .filter(item => item.type === 'category').length;
+          return (
+            <span className="text-muted-foreground font-mono text-xs">
+              {categoryIndex}
+            </span>
+          );
+        } else {
+          // Count subcategories only
+          const subcategoryIndex = data.slice(0, row.index + 1)
+            .filter(item => item.type === 'subcategory').length;
+          return (
+            <span className="text-muted-foreground font-mono text-xs">
+              {subcategoryIndex}
+            </span>
+          );
+        }
+      },
     },
     {
       accessorKey: 'name',

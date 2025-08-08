@@ -17,7 +17,6 @@ import {
   User,
   Tag,
   Users,
-  DollarSign,
   Globe,
   UserCheck,
   Image as ImageIcon,
@@ -436,10 +435,10 @@ const EventViewPage = () => {
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      <DollarSign className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                      {/* <DollarSign className="h-4 w-4 text-green-600 flex-shrink-0" /> */}
                                       <div className="min-w-0 flex-1">
                                         <p className="text-xs text-gray-500">Price</p>
-                                        <p className="font-bold text-green-600 text-base sm:text-lg">${slot.price}</p>
+                                        <p className="font-bold text-green-600 text-base sm:text-md">AUD ${slot.price}</p>
                                       </div>
                                     </div>
                                   </div>
@@ -455,7 +454,7 @@ const EventViewPage = () => {
                         <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-4">
                           <span className="break-words">Created: {formatDate(slotInfo.created_at)}</span>
                           <span className="break-words">Updated: {formatDate(slotInfo.updated_at)}</span>
-                          <span className="break-all">Slot ID: {slotInfo.slot_id}</span>
+                          {/* <span className="break-all">Slot ID: {slotInfo.slot_id}</span> */}
                         </div>
                       </div>
                     </div>
@@ -578,12 +577,12 @@ const EventViewPage = () => {
                     {eventData.slots?.filter(slot => !slot.slot_status).length || 0}
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between gap-2">
+                {/* <div className="flex items-center justify-between gap-2">
                   <span className="text-sm sm:text-base text-blue-700 min-w-0 flex-1">Event ID</span>
                   <Badge variant="outline" className="font-mono text-xs break-all flex-shrink-0">
                     {eventData.event_id.slice(-8)}
                   </Badge>
-                </div>
+                </div> */}
               </CardContent>
             </Card>
           </div>

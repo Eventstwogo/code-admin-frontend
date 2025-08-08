@@ -268,10 +268,10 @@ export default function UsersPage() {
     columns: [
       {
         accessorKey: "id",
-        header: () => <div className="text-center font-semibold">ID</div>,
+        header: () => <div className="text-center font-semibold">S.No</div>,
         cell: ({ row }) => (
           <div className="text-center font-mono text-sm">
-            {row.original.user_id}
+            {row.index + 1}
           </div>
         ),
       },
