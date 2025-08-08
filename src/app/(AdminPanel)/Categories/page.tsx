@@ -179,8 +179,8 @@ const CategoriesTable = () => {
   const updateCategoryStatus = useCallback(async (id: string, status: 'active' | 'inactive') => {
     const endpoint =
       status === 'active'
-        ? `/api/v1/category-items/${id}/restore`       // PATCH for restore
-        : `/api/v1/category-items/${id}/soft`;  // DELETE for soft delete
+        ? `/api/v1/category-items/restore/${id}`       // PATCH for restore
+        : `/api/v1/category-items/soft/${id}`;  // DELETE for soft delete
 
     try {
       if (status === 'active') {

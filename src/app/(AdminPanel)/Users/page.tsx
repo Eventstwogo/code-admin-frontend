@@ -1045,8 +1045,8 @@ export default function UsersPage() {
 
                 const userId = selectedUser.user_id || selectedUser.id;
                 const endpoint = selectedUser.is_deleted
-                  ? `/api/v1/admin/users/${userId}/reactivate`
-                  : `/api/v1/admin/users/${userId}/deactivate`;
+                  ? `/api/v1/admin/users/reactivate/${userId}`
+                  : `/api/v1/admin/users/deactivate/${userId}`;
 
                 try {
                   await axiosInstance.patch(endpoint);

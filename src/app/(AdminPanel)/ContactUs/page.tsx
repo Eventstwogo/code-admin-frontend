@@ -8,10 +8,10 @@ import {
   flexRender,
   ColumnDef,
 } from "@tanstack/react-table"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 import axiosInstance from "@/lib/axiosInstance"
-type EnquiryType = {
+type ContactUsType = {
   id: string
   first_name: string
   last_name: string
@@ -21,7 +21,7 @@ type EnquiryType = {
   created_at: string
 }
 
-const columns: ColumnDef<EnquiryType>[] = [
+const columns: ColumnDef<ContactUsType>[] = [
  {
   id: "sno",
   header: "S.No",
@@ -67,8 +67,8 @@ const DataTable = ({
   data,
   columns,
 }: {
-  data: EnquiryType[]
-  columns: ColumnDef<EnquiryType>[]
+  data: ContactUsType[]
+  columns: ColumnDef<ContactUsType>[]
 }) => {
   const table = useReactTable({
     data,
@@ -108,15 +108,15 @@ const DataTable = ({
 }
 
 const AdminEnquiriesPage = () => {
-  const [enquiries, setEnquiries] = useState<EnquiryType[]>([])
+  const [formData, setFormData] = useState<ContactUsType[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
         try {
-    const response=await axiosInstance.get("/api/v1/admin/enquiries")
+    const response=await axiosInstance.get("/api/v1/admin/contact-us")
       const data=response.data.data;
-       setEnquiries(data)
+       setFormData(data)
       console.log("data",data);
         } catch (error) {
           console.error(error);
@@ -142,7 +142,7 @@ const AdminEnquiriesPage = () => {
               <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
             </div>
           ) : (
-            <DataTable columns={columns} data={enquiries} />
+            <DataTable columns={columns} data={formData} />
           )}
         </CardContent>
 

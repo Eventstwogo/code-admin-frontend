@@ -462,7 +462,7 @@ export default function AdminEnquiryManagement() {
     try {
       // Extract the numeric ID from the query ID (remove QRY- prefix)
       const numericId = selectedQuery.id.replace('QRY-', '').replace(/^0+/, '') || '1'
-      const endpoint = `/api/v1/organizers/queries/${numericId}/messages`
+      const endpoint = `/api/v1/organizers/queries/messages/${numericId}`
       
       // Get current admin user ID from session storage or use a default
      
@@ -532,7 +532,7 @@ export default function AdminEnquiryManagement() {
     try {
       // Extract the numeric ID from the query ID (remove QRY- prefix)
       const numericId = selectedQuery.id.replace('QRY-', '').replace(/^0+/, '') || '1'
-      const endpoint = `/api/v1/organizers/queries/${numericId}/messages`
+      const endpoint = `/api/v1/organizers/queries/messages/${numericId}`
       
       // Get current admin user ID from session storage or use a default
     

@@ -77,7 +77,7 @@ export const roleService = {
 
   // Update role status
   updateStatus: async (roleId: string, status: boolean): Promise<ApiResponse<Role>> => {
-    const response = await axiosInstance.patch(`/api/v1/roles/${roleId}/status`, {
+    const response = await axiosInstance.patch(`/api/v1/roles/status/${roleId}`, {
       status
     });
     return response.data;
@@ -127,7 +127,7 @@ export const permissionService = {
 
   // Update permission status
   updateStatus: async (permissionId: string, status: boolean): Promise<ApiResponse<Permission>> => {
-    const response = await axiosInstance.patch(`/api/v1/permissions/${permissionId}/status`, {
+    const response = await axiosInstance.patch(`/api/v1/permissions/status/${permissionId}`, {
       status
     });
     return response.data;
@@ -177,7 +177,7 @@ export const rolePermissionService = {
 
   // Update role-permission status
   updateStatus: async (recordId: string, status: boolean): Promise<ApiResponse<RolePermission>> => {
-    const response = await axiosInstance.patch(`/api/v1/role-permissions/${recordId}/status`, {
+    const response = await axiosInstance.patch(`/api/v1/role-permissions/status/${recordId}`, {
       status
     });
     return response.data;
