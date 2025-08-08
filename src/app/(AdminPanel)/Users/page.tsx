@@ -825,7 +825,7 @@ export default function UsersPage() {
       </div>
 
       {/* Daily Registration Chart */}
-      <Card className="border-border/50 shadow-sm">
+      {/* <Card className="border-border/50 shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
@@ -887,7 +887,7 @@ export default function UsersPage() {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Table Section */}
       <Card className="border-border/50 shadow-sm card-hover">
