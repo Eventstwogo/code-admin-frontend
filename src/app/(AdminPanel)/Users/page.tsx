@@ -268,10 +268,10 @@ export default function UsersPage() {
     columns: [
       {
         accessorKey: "id",
-        header: () => <div className="text-center font-semibold">ID</div>,
+        header: () => <div className="text-center font-semibold">S.No</div>,
         cell: ({ row }) => (
           <div className="text-center font-mono text-sm">
-            {row.original.user_id}
+            {row.index + 1}
           </div>
         ),
       },
@@ -825,7 +825,7 @@ export default function UsersPage() {
       </div>
 
       {/* Daily Registration Chart */}
-      <Card className="border-border/50 shadow-sm">
+      {/* <Card className="border-border/50 shadow-sm">
         <CardHeader>
           <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
@@ -887,7 +887,7 @@ export default function UsersPage() {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Table Section */}
       <Card className="border-border/50 shadow-sm card-hover">
@@ -1045,8 +1045,8 @@ export default function UsersPage() {
 
                 const userId = selectedUser.user_id || selectedUser.id;
                 const endpoint = selectedUser.is_deleted
-                  ? `/api/v1/admin/users/${userId}/reactivate`
-                  : `/api/v1/admin/users/${userId}/deactivate`;
+                  ? `/api/v1/admin/users/reactivate/${userId}`
+                  : `/api/v1/admin/users/deactivate/${userId}`;
 
                 try {
                   await axiosInstance.patch(endpoint);

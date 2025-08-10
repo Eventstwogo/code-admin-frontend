@@ -199,15 +199,12 @@
 import {
   LayoutDashboard,
   Users,
-  DollarSign,
   ChevronDown,
   ChevronRight,
-  Plus,
-  Calendar,
   CalendarDays,
   Tags,
-  LineChart,
   UserCheck,
+  Smartphone,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -215,9 +212,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import {
   Tooltip,
-  TooltipProvider,
   TooltipContent,
-  TooltipTrigger,
 } from '@/components/ui/tooltip';
 
 type NavItem = {
@@ -230,7 +225,8 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/Dashboard' },
   { label: 'Events', icon: CalendarDays, href: '/Events' },
-  { label: 'Users', icon: Users, href: '/Users' },
+  { label: 'Admin Users', icon: Users, href: '/Users' },
+  { label: 'App Users', icon: Smartphone, href: '/AppUsers' },
   {
     label: 'Categories',
     icon: Tags,
@@ -238,7 +234,7 @@ const navItems: NavItem[] = [
   },
   { label: 'Organizers', icon: UserCheck, href: '/Organizers' },
     { label: 'Enqueries', icon: UserCheck, href: '/Enqueries' },
-    { label: 'UserQueries', icon: UserCheck, href: '/UserQueries' },
+    { label: 'Contact Us', icon: UserCheck, href: '/ContactUs' },
   // { label: 'Revenue', icon: LineChart, href: '/Revenue' },
 ];
 
