@@ -16,6 +16,7 @@ import useStore from "@/lib/Zustand";
 import { toast } from "sonner";
 import BackgroundImage from "@/components/BackgroundImage";
 import Link from "next/link";
+import {jwtDecode } from "jwt-decode";
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email format"),
   password: z
@@ -75,7 +76,15 @@ export default function LoginPage() {
         if (response.data.success) {
           const { access_token, refresh_token, session_id } = response.data;
           const { user_id } = response.data.data;
-
+       const decoded: { rid: string } = jwtDecode(access_token);
+  
+ 
+  if (decoded.rid === '7t94rb') {
+    toast.error("Unauthorized role. Only admins can log in here.");
+      
+ 
+    return;
+  }
           // Use the updated login function with all tokens
           login(access_token, refresh_token, session_id.toString());
           localStorage.setItem("id", user_id);

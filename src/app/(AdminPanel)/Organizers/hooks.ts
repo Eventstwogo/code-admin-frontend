@@ -107,7 +107,7 @@ export const useOrganizerActions = (setOrganizers: React.Dispatch<React.SetState
         setOrganizers((prev) =>
           prev.map((v) =>
             v.id === organizer.id
-              ? { ...v, status: "approved", isActive: true }
+              ? { ...v, status: "Approved", isActive: true }
               : v
           )
         );
@@ -138,7 +138,7 @@ export const useOrganizerActions = (setOrganizers: React.Dispatch<React.SetState
         setOrganizers((prev) =>
           prev.map((v) =>
             v.id === organizer.id
-              ? { ...v, status: "rejected", isActive: true } // Keep isActive true as backend doesn't change is_deleted
+              ? { ...v, status: "Rejected", isActive: true } // Keep isActive true as backend doesn't change is_deleted
               : v
           )
         );

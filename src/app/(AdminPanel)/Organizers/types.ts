@@ -16,7 +16,7 @@ export interface Organizer {
   };
   registrationDate: string;
   lastActivity: string;
-  status: "approved" | "pending" | "rejected"|"Hold";
+  status: "Approved" | "pending" | "Rejected"|"Hold";
   isActive: boolean;
   avatar?: string;
 }
