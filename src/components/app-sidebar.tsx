@@ -204,6 +204,7 @@ import {
   CalendarDays,
   Tags,
   UserCheck,
+  Ticket,
   Smartphone,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -225,7 +226,8 @@ type NavItem = {
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/Dashboard' },
   { label: 'Events', icon: CalendarDays, href: '/Events' },
-  { label: 'Admin Users', icon: Users, href: '/Users' },
+  { label: 'Bookings', icon: Ticket, href: '/Bookings' },
+ { label: 'Admin Users', icon: Users, href: '/Users' },
   { label: 'App Users', icon: Smartphone, href: '/AppUsers' },
   {
     label: 'Categories',
