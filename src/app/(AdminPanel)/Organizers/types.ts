@@ -28,6 +28,24 @@ export interface OrganizerStats {
   rejected: number;
 }
 
+export interface OrganizerCardStats {
+  total_organizers: number;
+  approved: number;
+  pending: number;
+  rejected: number;
+  under_review: number;
+  not_started: number;
+}
+
+export interface OrganizerCardStatsResponse {
+  statusCode: number;
+  message: string;
+  timestamp: string;
+  method: string;
+  path: string;
+  data: OrganizerCardStats;
+}
+
 export interface OrganizerFilters {
   searchTerm: string;
   statusFilter: string;

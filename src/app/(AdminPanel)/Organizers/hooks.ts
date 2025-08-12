@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import axiosInstance from "@/lib/axiosInstance";
-import { Organizer, OrganizerStats, OrganizerFilters } from "./types";
+import { Organizer, OrganizerStats, OrganizerFilters, OrganizerCardStats, OrganizerCardStatsResponse } from "./types";
 import { transformOrganizerData } from "./utils";
 
 export const useOrganizers = () => {
@@ -93,6 +93,47 @@ export const useOrganizerStats = (organizers: Organizer[]): OrganizerStats => {
       rejected: rejectedOrganizers,
     };
   }, [organizers]);
+};
+
+export const useOrganizerCardStats = () => {
+  const [cardStats, setCardStats] = useState<OrganizerCardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchCardStats = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await axiosInstance.get<OrganizerCardStatsResponse>(
+        "/api/v1/organizers/card-analytics/organizer-counts"
+      );
+      
+      if (response.data && response.data.statusCode === 200) {
+        setCardStats(response.data.data);
+      } else {
+        throw new Error(response.data?.message || "Failed to fetch organizer card stats");
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.detail ||
+                          "Failed to fetch organizer card stats. Please try again.";
+      setError(errorMessage);
+      console.error("Error fetching organizer card stats:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCardStats();
+  }, []);
+
+  return { 
+    cardStats, 
+    loading, 
+    error, 
+    refetch: fetchCardStats 
+  };
 };
 
 export const useOrganizerActions = (setOrganizers: React.Dispatch<React.SetStateAction<Organizer[]>>) => {
@@ -219,7 +260,7 @@ export const useOrganizerActions = (setOrganizers: React.Dispatch<React.SetState
     }
   };
 
-  const handleHoldOrganizer = async (organizer: Organizer, ) => {
+  const handleHoldOrganizer = async (organizer: Organizer, reason?: string) => {
     try {
       const response = await axiosInstance.patch(
         `/api/v1/organizers/approval/under-review?user_id=${organizer.id}`

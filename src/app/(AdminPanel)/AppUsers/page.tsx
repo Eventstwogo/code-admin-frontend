@@ -64,6 +64,34 @@ interface AppUsersApiResponse {
   data: AppUser[];
 }
 
+// Interface for User Analytics API Response
+interface UserAnalyticsSummary {
+  total_users: number;
+  active_users: number;
+  inactive_users: number;
+  locked_users: number;
+  with_expiry_flag: number;
+  expired_passwords: number;
+  high_failed_attempts: number;
+  earliest_user: string;
+  latest_user: string;
+}
+
+interface UserAnalyticsApiResponse {
+  statusCode: number;
+  message: string;
+  timestamp: string;
+  method: string;
+  path: string;
+  data: {
+    summary: UserAnalyticsSummary;
+    daily_registrations: Array<{
+      date: string;
+      count: number;
+    }>;
+  };
+}
+
 // ProfilePicture component
 const ProfilePicture = ({
   src,
@@ -172,6 +200,11 @@ export default function AppUsersPage() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [isFetching, setIsFetching] = useState(false);
   const hasFetchedRef = useRef(false);
+  
+  // Analytics data state
+  const [analyticsData, setAnalyticsData] = useState<UserAnalyticsSummary | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+  const [analyticsError, setAnalyticsError] = useState<string | null>(null);
 
   // Memoized filtered users
   const filteredUsers = useMemo(() => {
@@ -188,20 +221,34 @@ export default function AppUsersPage() {
     );
   }, [users, searchTerm]);
 
-  // Stats calculations
-  const stats = useMemo(() => {
-    const totalUsers = users.length;
-    const activeUsers = users.filter((user) => !user.is_deleted).length;
-    const inactiveUsers = users.filter((user) => user.is_deleted).length;
-    const usersWithExpiryFlag = users.filter((user) => user.days_180_flag).length;
+  // Note: Stats are now fetched from the analytics API instead of being calculated locally
 
-    return {
-      totalUsers,
-      activeUsers,
-      inactiveUsers,
-      usersWithExpiryFlag,
-    };
-  }, [users]);
+  // Fetch user analytics data
+  const fetchUserAnalytics = useCallback(async () => {
+    try {
+      setAnalyticsLoading(true);
+      setAnalyticsError(null);
+
+      console.log("Fetching user analytics from:", `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/v1/users/analytics/card`);
+      
+      const response = await axiosInstance.get<UserAnalyticsApiResponse>("/api/v1/users/analytics/card");
+      
+      console.log("Analytics API Response:", response.data);
+      
+      if (response.data.statusCode === 200) {
+        setAnalyticsData(response.data.data.summary);
+      } else {
+        throw new Error(response.data.message || "Failed to fetch user analytics");
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch user analytics:", err);
+      const errorMessage = err.response?.data?.message || err.message || "Failed to fetch user analytics";
+      setAnalyticsError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, []);
 
   // Fetch application users
   const fetchAppUsers = useCallback(async () => {
@@ -247,6 +294,7 @@ export default function AppUsersPage() {
 
   useEffect(() => {
     fetchAppUsers();
+    fetchUserAnalytics();
   }, []); // Empty dependency array ensures this only runs once
 
   // Format date helper
@@ -452,7 +500,7 @@ export default function AppUsersPage() {
     );
   }
 
-  if (error) {
+  if (error || analyticsError) {
     return (
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         <div className="flex items-center gap-3 mb-6 lg:mb-8">
@@ -470,11 +518,21 @@ export default function AppUsersPage() {
         <Card className="border-0 shadow-sm">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <AlertTriangle className="h-12 w-12 text-red-500 mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Error Loading Users</h3>
-            <p className="text-muted-foreground text-center mb-4">{error}</p>
-            <Button onClick={fetchAppUsers} className="flex items-center gap-2" disabled={isFetching}>
-              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-              {isFetching ? 'Loading...' : 'Retry'}
+            <h3 className="text-lg font-semibold mb-2">Error Loading Data</h3>
+            <div className="text-muted-foreground text-center mb-4 space-y-1">
+              {error && <p>Users: {error}</p>}
+              {analyticsError && <p>Analytics: {analyticsError}</p>}
+            </div>
+            <Button 
+              onClick={() => {
+                fetchAppUsers();
+                fetchUserAnalytics();
+              }} 
+              className="flex items-center gap-2" 
+              disabled={isFetching || analyticsLoading}
+            >
+              <RefreshCw className={`h-4 w-4 ${(isFetching || analyticsLoading) ? 'animate-spin' : ''}`} />
+              {(isFetching || analyticsLoading) ? 'Loading...' : 'Retry'}
             </Button>
           </CardContent>
         </Card>
@@ -499,14 +557,17 @@ export default function AppUsersPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            onClick={fetchAppUsers}
+            onClick={() => {
+              fetchAppUsers();
+              fetchUserAnalytics();
+            }}
             variant="outline"
             size="sm"
             className="flex items-center gap-2"
-            disabled={isFetching}
+            disabled={isFetching || analyticsLoading}
           >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{isFetching ? 'Loading...' : 'Refresh'}</span>
+            <RefreshCw className={`h-4 w-4 ${(isFetching || analyticsLoading) ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{(isFetching || analyticsLoading) ? 'Loading...' : 'Refresh'}</span>
           </Button>
         </div>
       </div>
@@ -520,7 +581,7 @@ export default function AppUsersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-              {stats.totalUsers}
+              {analyticsLoading ? "..." : (analyticsData ? analyticsData.total_users : "0")}
             </div>
             <p className="text-xs text-blue-600/80 dark:text-blue-400/80">
               All registered users
@@ -535,7 +596,7 @@ export default function AppUsersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-700 dark:text-green-300">
-              {stats.activeUsers}
+              {analyticsLoading ? "..." : (analyticsData ? analyticsData.active_users : "0")}
             </div>
             <p className="text-xs text-green-600/80 dark:text-green-400/80">
               Currently active
@@ -550,13 +611,28 @@ export default function AppUsersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-700 dark:text-red-300">
-              {stats.inactiveUsers}
+              {analyticsLoading ? "..." : (analyticsData ? analyticsData.inactive_users : "0")}
             </div>
             <p className="text-xs text-red-600/80 dark:text-red-400/80">
               Deactivated users
             </p>
           </CardContent>
         </Card>
+
+        {/* <Card className="border-0 shadow-sm bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/50 dark:to-purple-900/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Locked Users</CardTitle>
+            <Lock className="h-4 w-4 text-purple-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
+              {analyticsLoading ? "..." : (analyticsData ? analyticsData.locked_users : "0")}
+            </div>
+            <p className="text-xs text-purple-600/80 dark:text-purple-400/80">
+              Account locked
+            </p>
+          </CardContent>
+        </Card> */}
 
         <Card className="border-0 shadow-sm bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/50 dark:to-yellow-900/50">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -565,13 +641,43 @@ export default function AppUsersPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
-              {stats.usersWithExpiryFlag}
+              {analyticsLoading ? "..." : (analyticsData ? analyticsData.with_expiry_flag : "0")}
             </div>
             <p className="text-xs text-yellow-600/80 dark:text-yellow-400/80">
               180-day flag set
             </p>
           </CardContent>
         </Card>
+
+        {/* <Card className="border-0 shadow-sm bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Expired Passwords</CardTitle>
+            <KeyRound className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
+              {analyticsLoading ? "..." : (analyticsData ? analyticsData.expired_passwords : "0")}
+            </div>
+            <p className="text-xs text-orange-600/80 dark:text-orange-400/80">
+              Password expired
+            </p>
+          </CardContent>
+        </Card> */}
+
+        {/* <Card className="border-0 shadow-sm bg-gradient-to-br from-pink-50 to-pink-100 dark:from-pink-950/50 dark:to-pink-900/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">High Failed Attempts</CardTitle>
+            <ShieldAlert className="h-4 w-4 text-pink-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-pink-700 dark:text-pink-300">
+              {analyticsLoading ? "..." : (analyticsData ? analyticsData.high_failed_attempts : "0")}
+            </div>
+            <p className="text-xs text-pink-600/80 dark:text-pink-400/80">
+              Multiple failed logins
+            </p>
+          </CardContent>
+        </Card> */}
       </div>
 
       {/* Users Table */}

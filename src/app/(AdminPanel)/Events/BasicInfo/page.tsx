@@ -384,6 +384,7 @@ const BasicInfoPage = () => {
       formData.append('event_title', data.title);
       formData.append('event_slug', generateEventSlug(data.title));
       formData.append('category_id', data.category);
+      formData.append('location', data.address);
       
       // Optional subcategory
       formData.append('subcategory_id', data.subcategory?.trim() || '');

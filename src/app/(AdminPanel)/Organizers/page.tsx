@@ -11,6 +11,7 @@ import {
   useOrganizers,
   useOrganizerFilters,
   useOrganizerStats,
+  useOrganizerCardStats,
   useOrganizerActions,
 } from "./hooks";
 
@@ -48,6 +49,7 @@ const OrganizerManagement = () => {
   const { organizers, setOrganizers, loading, error } = useOrganizers();
   const { filters, filteredOrganizers, updateFilter } = useOrganizerFilters(organizers);
   const stats = useOrganizerStats(organizers);
+  const { cardStats, loading: cardStatsLoading, error: cardStatsError } = useOrganizerCardStats();
   const {
     handleApproveOrganizer,
     handleRejectOrganizer,
@@ -129,7 +131,7 @@ console.log(organizers);
 
   const confirmHoldOrganizer = async (reason: string) => {
     if (organizerToHold && reason.trim()) {
-      const success = await handleHoldOrganizer(organizerToHold, );
+      const success = await handleHoldOrganizer(organizerToHold, reason);
       if (success) {
         setSelectedOrganizer((prev) =>
           prev && prev.id === organizerToHold.id
@@ -222,6 +224,7 @@ const handleHoldOrganizerWithUpdate = async (organizer: Organizer, reason: strin
       <div className="container mx-auto max-w-7xl p-4 lg:p-8 space-y-8">
         {/* Error State */}
         {error && <ErrorState error={error} />}
+        {cardStatsError && <ErrorState error={cardStatsError} />}
   <h1 className="text-4xl font-bold  mb-10">Organizer Management</h1>
         {/* Page Header */}
         {/* <PageHeader onExport={handleExportOrganizers} /> */}
@@ -230,25 +233,25 @@ const handleHoldOrganizerWithUpdate = async (organizer: Organizer, reason: strin
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
             title="Total Organizers"
-            value={stats.total.toString()}
+            value={cardStats ? cardStats.total_organizers.toString() : (cardStatsLoading ? "..." : "0")}
             icon={<Users className="w-6 h-6" />}
             color="blue"
           />
           <StatCard
             title="Approved"
-            value={stats.approved.toString()}
+            value={cardStats ? cardStats.approved.toString() : (cardStatsLoading ? "..." : "0")}
             icon={<CheckCircle className="w-6 h-6" />}
             color="green"
           />
           <StatCard
             title="Pending"
-            value={stats.pending.toString()}
+            value={cardStats ? cardStats.pending.toString() : (cardStatsLoading ? "..." : "0")}
             icon={<Clock className="w-6 h-6" />}
             color="yellow"
           />
           <StatCard
             title="Rejected"
-            value={stats.rejected.toString()}
+            value={cardStats ? cardStats.rejected.toString() : (cardStatsLoading ? "..." : "0")}
             icon={<XCircle className="w-6 h-6" />}
             color="red"
           />

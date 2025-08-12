@@ -81,6 +81,22 @@ interface BookingStats {
   averageBookingValue: number;
 }
 
+interface BookingAnalyticsResponse {
+  statusCode: number;
+  message: string;
+  timestamp: string;
+  method: string;
+  path: string;
+  data: {
+    booking_analytics: {
+      total_bookings: number;
+      total_revenue: number;
+      approved_bookings: number;
+      average_booking_value: number;
+    };
+  };
+}
+
 const BookingsPage = () => {
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,9 +120,27 @@ const BookingsPage = () => {
   const [selectedBooking, setSelectedBooking] = useState<BookingData | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
+  // Load analytics data
+  const loadAnalytics = useCallback(async () => {
+    try {
+      const response = await axiosInstance.get<BookingAnalyticsResponse>('/api/v1/analytics/booking-analytics');
+      const analytics = response.data.data.booking_analytics;
+      
+      setStats(prevStats => ({
+        ...prevStats,
+        totalBookings: analytics.total_bookings,
+        totalRevenue: analytics.total_revenue,
+        approvedBookings: analytics.approved_bookings,
+        averageBookingValue: analytics.average_booking_value,
+      }));
+    } catch (error) {
+      console.error("Error loading analytics:", error);
+      toast.error("Failed to load analytics data");
+    }
+  }, []);
+
   // Load bookings data
   const loadBookings = useCallback(async () => {
-    setLoading(true);
     try {
       const response = await axiosInstance.get<BookingsResponse>('/api/v1/bookings/all', {
         params: {
@@ -123,33 +157,54 @@ const BookingsPage = () => {
       setBookings(bookingsData);
       setTotalItems(total_items);
       setTotalPages(total_pages);
-console.log('Bookings loaded:', bookingsData);
-      // Calculate stats
-      const totalRevenue = bookingsData.reduce((sum, booking) => sum + booking.total_price, 0);
-      const approvedBookings = bookingsData.filter(b => b.booking_status === 'approved').length;
+
+      // Calculate additional stats not provided by analytics API
       const pendingBookings = bookingsData.filter(b => b.booking_status === 'pending').length;
       const completedPayments = bookingsData.filter(b => b.payment_status === 'COMPLETED').length;
-      const averageBookingValue = bookingsData.length > 0 ? totalRevenue / bookingsData.length : 0;
 
-      setStats({
-        totalBookings: total_items,
-        totalRevenue,
-        approvedBookings,
+      setStats(prevStats => ({
+        ...prevStats,
         pendingBookings,
         completedPayments,
-        averageBookingValue,
-      });
+      }));
 
     } catch (error) {
       console.error("Error loading bookings:", error);
       toast.error("Failed to load bookings data");
-    } finally {
-      setLoading(false);
     }
   }, [currentPage, perPage, searchTerm, statusFilter, paymentFilter]);
 
+  // Combined loading function for refresh button
+  const loadAllData = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Load analytics data first (for main stats)
+      await loadAnalytics();
+      // Then load bookings data (for table and additional stats)
+      await loadBookings();
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadAnalytics, loadBookings]);
+
+  // Load analytics data once on component mount
   useEffect(() => {
-    loadBookings();
+    loadAnalytics();
+  }, [loadAnalytics]);
+
+  // Load bookings data when filters change
+  useEffect(() => {
+    const loadBookingsWithLoading = async () => {
+      setLoading(true);
+      try {
+        await loadBookings();
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadBookingsWithLoading();
   }, [loadBookings]);
 
   const formatDate = (dateString: string) => {
@@ -274,7 +329,7 @@ console.log('Bookings loaded:', bookingsData);
           </div>
           <div className="flex items-center gap-3">
             <Button
-              onClick={loadBookings}
+              onClick={loadAllData}
               variant="outline"
               size="sm"
               className="flex items-center gap-2"
