@@ -113,14 +113,21 @@ export function DataTable<TData, TValue>({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="rounded-md border">
-        <Table>
+      <div className="rounded-md border overflow-x-auto">
+        <Table className="table-fixed min-w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead 
+                      key={header.id}
+                      style={{ 
+                        width: header.getSize() !== 150 ? `${header.getSize()}px` : 'auto',
+                        minWidth: header.getSize() !== 150 ? `${header.getSize()}px` : 'auto',
+                        maxWidth: header.getSize() !== 150 ? `${header.getSize()}px` : 'auto'
+                      }}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -141,7 +148,14 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell 
+                      key={cell.id}
+                      style={{ 
+                        width: cell.column.getSize() !== 150 ? `${cell.column.getSize()}px` : 'auto',
+                        minWidth: cell.column.getSize() !== 150 ? `${cell.column.getSize()}px` : 'auto',
+                        maxWidth: cell.column.getSize() !== 150 ? `${cell.column.getSize()}px` : 'auto'
+                      }}
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()

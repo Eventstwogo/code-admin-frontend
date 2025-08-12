@@ -206,6 +206,9 @@ import {
   UserCheck,
   Ticket,
   Smartphone,
+  Handshake,
+  Info,
+  Megaphone,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -227,6 +230,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/Dashboard' },
   { label: 'Events', icon: CalendarDays, href: '/Events' },
   { label: 'Bookings', icon: Ticket, href: '/Bookings' },
+  { label: 'Advertisements', icon: Megaphone, href: '/Advertisements' },
  { label: 'Admin Users', icon: Users, href: '/Users' },
   { label: 'App Users', icon: Smartphone, href: '/AppUsers' },
   {
@@ -235,6 +239,8 @@ const navItems: NavItem[] = [
     href:'/Categories'
   },
   { label: 'Organizers', icon: UserCheck, href: '/Organizers' },
+  { label: 'Partners', icon: Handshake, href: '/Partners' },
+  { label: 'About Us', icon: Info, href: '/AboutUs' },
     { label: 'Enqueries', icon: UserCheck, href: '/Enqueries' },
     { label: 'Contact Us', icon: UserCheck, href: '/ContactUs' },
   // { label: 'Revenue', icon: LineChart, href: '/Revenue' },
