@@ -119,10 +119,11 @@ const BookingsPage = () => {
       });
 
       const { bookings: bookingsData, total_items, total_pages } = response.data.data;
+  
       setBookings(bookingsData);
       setTotalItems(total_items);
       setTotalPages(total_pages);
-
+console.log('Bookings loaded:', bookingsData);
       // Calculate stats
       const totalRevenue = bookingsData.reduce((sum, booking) => sum + booking.total_price, 0);
       const approvedBookings = bookingsData.filter(b => b.booking_status === 'approved').length;
@@ -164,7 +165,7 @@ const BookingsPage = () => {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'AUD'
     }).format(amount);
   };
 

@@ -137,6 +137,7 @@ export const createColumns = (
     ),
     enableSorting: false,
     enableHiding: false,
+    size: 50, // Fixed width for checkbox column
   },
   {
     accessorKey: "card_image",
@@ -163,6 +164,7 @@ export const createColumns = (
       )
     },
     enableSorting: false,
+    size: 80, // Fixed width for image column
   },
   {
     accessorKey: "event_title",
@@ -180,31 +182,31 @@ export const createColumns = (
     cell: ({ row }) => {
       const event = row.original
       return (
-        <div className="space-y-1 min-w-[200px]">
-          <h3 className="font-semibold text-gray-800 line-clamp-1">
+        <div className="space-y-1 w-full max-w-[320px] pr-4">
+          <h3 className="font-semibold text-gray-800 line-clamp-2 text-sm leading-tight">
             {event.event_title}
           </h3>
           {event.extra_data?.address && (
-            <div className="flex items-center text-sm text-gray-600">
+            <div className="flex items-center text-xs text-gray-600">
               <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
-              <span className="line-clamp-1">{event.extra_data.address}</span>
+              <span className="line-clamp-1 truncate">{event.extra_data.address}</span>
             </div>
           )}
           {event.extra_data?.duration && (
-            <div className="flex items-center text-sm text-gray-600">
+            <div className="flex items-center text-xs text-gray-600">
               <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
-              {event.extra_data.duration}
+              <span className="truncate">{event.extra_data.duration}</span>
             </div>
           )}
           {event.hash_tags && event.hash_tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
+            <div className="flex flex-wrap gap-1 mt-1">
               {event.hash_tags.slice(0, 2).map((tag: string, index: number) => (
-                <Badge key={index} variant="secondary" className="text-xs">
-                  {tag}
+                <Badge key={index} variant="secondary" className="text-xs px-1 py-0">
+                  {tag.length > 10 ? `${tag.substring(0, 10)}...` : tag}
                 </Badge>
               ))}
               {event.hash_tags.length > 2 && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs px-1 py-0">
                   +{event.hash_tags.length - 2}
                 </Badge>
               )}
@@ -213,6 +215,7 @@ export const createColumns = (
         </div>
       )
     },
+    size: 350, // Fixed width for event details column (increased for more space)
   },
   {
     accessorKey: "category",
@@ -230,18 +233,24 @@ export const createColumns = (
     cell: ({ row }) => {
       const event = row.original
       return event.category ? (
-        <div className="space-y-1">
-          <Badge variant="outline" className="text-xs">
-            {event.category.category_name}
+        <div className="space-y-1 w-full pl-2">
+          <Badge variant="outline" className="text-xs truncate max-w-[150px]" title={event.category.category_name}>
+            {event.category.category_name.length > 18 ? 
+              `${event.category.category_name.substring(0, 18)}...` : 
+              event.category.category_name
+            }
           </Badge>
           {event.subcategory && (
-            <div className="text-xs text-gray-500">
-              {event.subcategory.subcategory_name}
+            <div className="text-xs text-gray-500 truncate max-w-[150px]" title={event.subcategory.subcategory_name}>
+              {event.subcategory.subcategory_name.length > 20 ? 
+                `${event.subcategory.subcategory_name.substring(0, 20)}...` : 
+                event.subcategory.subcategory_name
+              }
             </div>
           )}
         </div>
       ) : (
-        <span className="text-gray-400">No category</span>
+        <span className="text-gray-400 text-sm">No category</span>
       )
     },
     sortingFn: (rowA, rowB) => {
@@ -249,6 +258,7 @@ export const createColumns = (
       const categoryB = rowB.original.category?.category_name || ""
       return categoryA.localeCompare(categoryB)
     },
+    size: 180, // Fixed width for category column (increased for more space)
   },
   {
     accessorKey: "organizer",
@@ -266,14 +276,14 @@ export const createColumns = (
     cell: ({ row }) => {
       const event = row.original
       return event.organizer ? (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 w-full pl-2">
           <Users className="h-4 w-4 text-gray-400 flex-shrink-0" />
-          <span className="text-sm text-gray-600 line-clamp-1">
+          <span className="text-sm text-gray-600 truncate max-w-[150px]" title={event.extra_data?.organizer || event.organizer.username}>
             {event.extra_data?.organizer || event.organizer.username}
           </span>
         </div>
       ) : (
-        <span className="text-gray-400">No organizer</span>
+        <span className="text-gray-400 text-sm">No organizer</span>
       )
     },
     sortingFn: (rowA, rowB) => {
@@ -281,6 +291,7 @@ export const createColumns = (
       const organizerB = rowB.original.organizer?.username || ""
       return organizerA.localeCompare(organizerB)
     },
+    size: 180, // Fixed width for organizer column
   },
   {
     accessorKey: "event_status",
@@ -303,6 +314,7 @@ export const createColumns = (
         </Badge>
       )
     },
+    size: 100, // Fixed width for status column
   },
   {
     accessorKey: "created_at",
@@ -325,6 +337,7 @@ export const createColumns = (
         </div>
       )
     },
+    size: 120, // Fixed width for created date column
   },
   {
     id: "actions",
@@ -333,5 +346,6 @@ export const createColumns = (
       const event = row.original
       return <ActionsCell event={event} onDelete={onDelete} />
     },
+    size: 80, // Fixed width for actions column
   },
 ]
