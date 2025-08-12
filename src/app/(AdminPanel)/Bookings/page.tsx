@@ -218,7 +218,7 @@ const BookingsPage = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-AU', {
       style: 'currency',
       currency: 'AUD'
     }).format(amount);
