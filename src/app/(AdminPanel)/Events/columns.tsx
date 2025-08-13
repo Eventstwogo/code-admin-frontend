@@ -1,13 +1,14 @@
 "use client"
 
 import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown, Calendar, Clock, Eye, Edit, MapPin, MoreHorizontal, Trash2, Users } from "lucide-react"
+import { ArrowUpDown, Calendar, Clock, Eye, Edit, MapPin, MoreHorizontal, Trash2, Users, Star, Ticket, Settings } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,7 +62,8 @@ export interface Event {
   event_extra_images: string[] | null;
   extra_data: ExtraData | null;
   hash_tags: string[] | null;
-  event_status: boolean;
+  event_status: "ACTIVE" | "INACTIVE" | "PENDING";
+  is_featured?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -114,7 +116,11 @@ const ActionsCell = ({
 }
 
 export const createColumns = (
-  onDelete: (id: string) => void
+  onDelete: (id: string) => void,
+  onFeaturedToggle?: (eventId: string, currentStatus: boolean) => void,
+  onCreateCoupons?: (eventId: string) => void,
+  onStatusToggle?: (eventId: string, currentStatus: "ACTIVE" | "INACTIVE" | "PENDING") => void,
+  onCreateSlots?: (eventId: string) => void
 ): ColumnDef<Event>[] => [
   {
     id: "select",
@@ -139,33 +145,7 @@ export const createColumns = (
     enableHiding: false,
     size: 50, // Fixed width for checkbox column
   },
-  {
-    accessorKey: "card_image",
-    header: "Image",
-    cell: ({ row }) => {
-      const event = row.original
-      return (
-        <div className="relative h-12 w-12 rounded-lg overflow-hidden bg-gray-200">
-          {event.card_image ? (
-            <Image
-              src={event.card_image}
-              alt={event.event_title}
-              fill
-              sizes="48px"
-              className="object-cover"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <Calendar className="h-6 w-6 text-gray-400" />
-            </div>
-          )}
-        </div>
-      )
-    },
-    enableSorting: false,
-    size: 80, // Fixed width for image column
-  },
+
   {
     accessorKey: "event_title",
     header: ({ column }) => {
@@ -308,13 +288,35 @@ export const createColumns = (
     },
     cell: ({ row }) => {
       const event = row.original
+      
+      if (event.event_status === "PENDING") {
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onCreateSlots?.(event.event_id)}
+            className="flex items-center gap-2 hover:bg-orange-50 hover:text-orange-600 border-orange-200"
+          >
+            <Settings className="h-4 w-4" />
+            Create Slots
+          </Button>
+        )
+      }
+      
+      // For ACTIVE/INACTIVE status, show toggle switch
+      const isActive = event.event_status === "ACTIVE"
       return (
-        <Badge variant={event.event_status ? "default" : "secondary"}>
-          {event.event_status ? "Inactive" : "Active"}
-        </Badge>
+        
+          <Switch
+            checked={isActive}
+            onCheckedChange={() => onStatusToggle?.(event.event_id, event.event_status)}
+            className="data-[state=checked]:bg-green-500"
+          />
+          
+    
       )
     },
-    size: 100, // Fixed width for status column
+    size: 150, // Fixed width for status column (increased for switch)
   },
   {
     accessorKey: "created_at",
@@ -338,6 +340,53 @@ export const createColumns = (
       )
     },
     size: 120, // Fixed width for created date column
+  },
+  {
+    id: "featured",
+    header: "Featured List",
+    cell: ({ row }) => {
+      const event = row.original
+      const isFeatured = event.featured_event || false
+      
+      return (
+        <Button
+          variant={isFeatured ? "default" : "outline"}
+          size="sm"
+          onClick={() => onFeaturedToggle?.(event.event_id, isFeatured)}
+          className={`flex items-center gap-2 ${
+            isFeatured 
+              ? "bg-yellow-500 hover:bg-yellow-600 text-white" 
+              : "hover:bg-yellow-50 hover:text-yellow-600"
+          }`}
+        >
+          <Star className={`h-4 w-4 ${isFeatured ? "fill-current" : ""}`} />
+          {isFeatured ? "Featured" : "Not Featured"}
+        </Button>
+      )
+    },
+    enableSorting: false,
+    size: 140, // Fixed width for featured column
+  },
+  {
+    id: "coupons",
+    header: "Coupons",
+    cell: ({ row }) => {
+      const event = row.original
+      
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => onCreateCoupons?.(event.event_id)}
+          className="flex items-center gap-2 hover:bg-blue-50 hover:text-blue-600"
+        >
+          <Ticket className="h-4 w-4" />
+          Create Coupons
+        </Button>
+      )
+    },
+    enableSorting: false,
+    size: 140, // Fixed width for coupons column
   },
   {
     id: "actions",
