@@ -122,29 +122,14 @@ export const createColumns = (
   onStatusToggle?: (eventId: string, currentStatus: "ACTIVE" | "INACTIVE" | "PENDING") => void,
   onCreateSlots?: (eventId: string) => void
 ): ColumnDef<Event>[] => [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-    size: 50, // Fixed width for checkbox column
-  },
+{
+  id: "serialNumber",
+  header: "S.No",
+  cell: ({ row }) => row.index + 1, // This gives the row number starting from 1
+  enableSorting: false,
+  enableHiding: false,
+  size: 50, // Optional: fixed width for the S.No column
+},
 
   {
     accessorKey: "event_title",
@@ -306,17 +291,14 @@ export const createColumns = (
       // For ACTIVE/INACTIVE status, show toggle switch
       const isActive = event.event_status === "ACTIVE"
       return (
-        
-          <Switch
-            checked={isActive}
-            onCheckedChange={() => onStatusToggle?.(event.event_id, event.event_status)}
-            className="data-[state=checked]:bg-green-500"
-          />
-          
-    
+        <Switch
+          checked={isActive}
+          onCheckedChange={() => onStatusToggle?.(event.event_id, event.event_status)}
+          className="data-[state=checked]:bg-green-500"
+        />
       )
     },
-    size: 150, // Fixed width for status column (increased for switch)
+    size: 100, // Fixed width for status column (increased for switch)
   },
   {
     accessorKey: "created_at",
@@ -386,10 +368,11 @@ export const createColumns = (
       )
     },
     enableSorting: false,
-    size: 140, // Fixed width for coupons column
+    size: 180, // Fixed width for coupons column
   },
   {
     id: "actions",
+    header: "Actions",
     enableHiding: false,
     cell: ({ row }) => {
       const event = row.original

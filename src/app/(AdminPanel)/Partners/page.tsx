@@ -211,7 +211,7 @@ export default function PartnersPage() {
               </TableHeader>
               <TableBody>
                 {filteredPartners.map((partner) => (
-                  <TableRow key={partner.id}>
+                  <TableRow key={partner.partner_id}>
                     <TableCell>
                       <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
                         <Image
@@ -238,7 +238,7 @@ export default function PartnersPage() {
                       </a>
                     </TableCell>
                     <TableCell>
-                      {partner.createdAt ? new Date(partner.createdAt).toLocaleDateString() : '-'}
+                      {partner.created_at ? new Date(partner.created_at).toLocaleDateString() : '-'}
                     </TableCell>
                     <TableCell>
                       <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">

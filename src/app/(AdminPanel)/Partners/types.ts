@@ -1,9 +1,11 @@
 export interface Partner {
   partner_id: string;
-  logo: string; // URL or file path to the logo
-  website_url: string; // Partner's website URL
-  createdAt?: string;
+  logo: string;
+  website_url: string;
+  created_at: string;
   updatedAt?: string;
+  // Support for both naming conventions from API
+  createdAt?: string;
 }
 
 export interface PartnerFormData {

@@ -326,7 +326,7 @@ export default function AdvertisementsPage() {
 
       {/* Form Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingAd ? "Edit Advertisement" : "Create New Advertisement"}

@@ -270,6 +270,7 @@ export const createAdvertisementColumns = (
   },
   {
     id: "actions",
+    header: "Actions",
     enableHiding: false,
     cell: ({ row }) => {
       const advertisement = row.original

@@ -33,12 +33,12 @@ function PartnerActions({ partner, onEdit, onDelete }: PartnerActionsProps) {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
         <DropdownMenuItem
-          onClick={() => navigator.clipboard.writeText(partner.url)}
+          onClick={() => navigator.clipboard.writeText(partner.website_url)}
         >
           Copy URL
         </DropdownMenuItem>
         <DropdownMenuItem
-          onClick={() => window.open(partner.url, '_blank')}
+          onClick={() => window.open(partner.website_url, '_blank')}
         >
           <ExternalLink className="mr-2 h-4 w-4" />
           Visit Website
@@ -120,7 +120,7 @@ export const createPartnerColumns = (
     },
   },
   {
-    accessorKey: "createdAt",
+    accessorKey: "created_at",
     header: ({ column }) => {
       return (
         <Button
@@ -132,16 +132,19 @@ export const createPartnerColumns = (
         </Button>
       );
     },
-    cell: ({ row }) => {
-      const date = row.getValue("createdAt") as string;
-      if (!date) return <span className="text-muted-foreground">-</span>;
-      
-      return (
-        <div className="text-sm">
-          {new Date(date).toLocaleDateString()}
-        </div>
-      );
-    },
+cell: ({ row }) => {
+  const partner = row.original;
+  // Handle both created_at and createdAt properties
+  const createdDate = partner.created_at || partner.createdAt;
+  console.log("Partner data:", partner);
+  console.log("Created Date:", createdDate);
+  const date = createdDate ? new Date(createdDate) : null;
+  return (
+    <div className="text-sm text-gray-600">
+      {date && !isNaN(date.getTime()) ? date.toLocaleDateString() : "—"}
+    </div>
+  );
+},
   },
   {
     accessorKey: "status",

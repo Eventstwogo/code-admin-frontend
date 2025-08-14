@@ -123,9 +123,9 @@ export function DataTable<TData, TValue>({
                     <TableHead 
                       key={header.id}
                       style={{ 
-                        width: header.getSize() !== 150 ? `${header.getSize()}px` : 'auto',
-                        minWidth: header.getSize() !== 150 ? `${header.getSize()}px` : 'auto',
-                        maxWidth: header.getSize() !== 150 ? `${header.getSize()}px` : 'auto'
+                        width: header.column.columnDef.size ? `${header.getSize()}px` : 'auto',
+                        minWidth: header.column.columnDef.size ? `${header.getSize()}px` : 'auto',
+                        maxWidth: header.column.columnDef.size ? `${header.getSize()}px` : 'auto'
                       }}
                     >
                       {header.isPlaceholder
@@ -151,9 +151,9 @@ export function DataTable<TData, TValue>({
                     <TableCell 
                       key={cell.id}
                       style={{ 
-                        width: cell.column.getSize() !== 150 ? `${cell.column.getSize()}px` : 'auto',
-                        minWidth: cell.column.getSize() !== 150 ? `${cell.column.getSize()}px` : 'auto',
-                        maxWidth: cell.column.getSize() !== 150 ? `${cell.column.getSize()}px` : 'auto'
+                        width: cell.column.columnDef.size ? `${cell.column.getSize()}px` : 'auto',
+                        minWidth: cell.column.columnDef.size ? `${cell.column.getSize()}px` : 'auto',
+                        maxWidth: cell.column.columnDef.size ? `${cell.column.getSize()}px` : 'auto'
                       }}
                     >
                       {flexRender(

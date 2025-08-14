@@ -43,7 +43,7 @@ export const usePartners = () => {
   useEffect(() => {
     fetchPartners();
   }, []);
-
+console.log("Partners Hook Initialized:", partners);
   return { partners, setPartners, loading, error, refetch: fetchPartners };
 };
 
