@@ -3,6 +3,7 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,7 +63,8 @@ function PartnerActions({ partner, onEdit, onDelete }: PartnerActionsProps) {
 
 export const createPartnerColumns = (
   onEdit: (partner: Partner) => void,
-  onDelete: (partner: Partner) => void
+  onDelete: (partner: Partner) => void,
+  onStatusToggle: (id: string, currentStatus: boolean) => Promise<void>
 ): ColumnDef<Partner>[] => [
   {
     accessorKey: "logo",
@@ -149,12 +151,20 @@ cell: ({ row }) => {
   {
     accessorKey: "status",
     header: "Status",
-    cell: () => {
-      // For now, all partners are active
+    cell: ({ row }) => {
+      const partner = row.original;
+      const isActive = partner.status !== false;
+       // Default to active if status is undefined
       return (
-        <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-          Active
-        </Badge>
+        <div className="flex items-center space-x-2">
+          <Switch
+            checked={isActive}
+            onCheckedChange={async (checked) => {
+              await onStatusToggle(partner.partner_id, isActive)
+            }}
+          />
+         
+        </div>
       );
     },
   },

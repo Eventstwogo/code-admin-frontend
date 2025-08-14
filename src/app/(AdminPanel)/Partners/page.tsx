@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Search } from "lucide-react";
 import { usePartners, usePartnerFilters, usePartnerStats, usePartnerActions } from "./hooks";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +31,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Partner } from "./types";
+import axiosInstance from "@/lib/axiosInstance";
+import { toast } from "sonner";
 
 export default function PartnersPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -53,6 +56,32 @@ export default function PartnersPage() {
   const handleDelete = (partner: Partner) => {
     setSelectedPartner(partner);
     setShowDeleteDialog(true);
+  };
+
+  // Handle status toggle
+  const handleStatusToggle = async (id: string, currentStatus: boolean) => {
+    try {
+      // Call the API to toggle status (you mentioned the API endpoint)
+      // Note: You mentioned /api/v1/advertisements/status/{ad_id} for partners, 
+      // but it should probably be /api/v1/partners/status/{partner_id}
+      await axiosInstance.patch(`/api/v1/partners/status/${id}` );
+      
+      // Update the local state
+      setPartners(prev => 
+        prev.map(partner => 
+          partner.partner_id === id 
+            ? { ...partner, partner_status: !currentStatus }
+            : partner
+        )
+      );
+      
+      // Show success message
+      const message = currentStatus ? 'Partner activated successfully' : 'Partner deactivated successfully';
+      toast.success(message);
+    } catch (error) {
+      console.error('Error toggling partner status:', error);
+      // You can add error toast notification here if available
+    }
   };
 
   // Confirm delete
@@ -202,6 +231,7 @@ export default function PartnersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead >S.No</TableHead>
                   <TableHead>Logo</TableHead>
                   <TableHead>Website URL</TableHead>
                   <TableHead>Created Date</TableHead>
@@ -212,6 +242,9 @@ export default function PartnersPage() {
               <TableBody>
                 {filteredPartners.map((partner) => (
                   <TableRow key={partner.partner_id}>
+                    <TableCell className="w-12">
+                      {filteredPartners.indexOf(partner) + 1}
+                    </TableCell>
                     <TableCell>
                       <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
                         <Image
@@ -241,9 +274,21 @@ export default function PartnersPage() {
                       {partner.created_at ? new Date(partner.created_at).toLocaleDateString() : '-'}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                        Active
-                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          checked={!partner.partner_status}
+                          onCheckedChange={() => handleStatusToggle(partner.partner_id, partner.partner_status)}
+                        />
+                        <Badge 
+                          variant={!partner.partner_status ? "default" : "secondary"}
+                          className={!partner.partner_status 
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" 
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                          }
+                        >
+                          {partner.partner_status ? "Inactive" : "Active"}
+                        </Badge>
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <PartnerActions partner={partner} />

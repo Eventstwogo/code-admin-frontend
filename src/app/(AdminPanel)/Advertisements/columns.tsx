@@ -6,6 +6,7 @@ import Image from "next/image"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -78,31 +79,17 @@ const ActionsCell = ({
 
 export const createAdvertisementColumns = (
   onEdit: (ad: Advertisement) => void,
-  onDelete: (id: string) => void
+  onDelete: (id: string) => void,
+  onStatusToggle: (id: string, currentStatus: boolean) => Promise<void>
 ): ColumnDef<Advertisement>[] => [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-    size: 50,
-  },
+ {
+  id: "serialNumber",
+  header: "S.No",
+  cell: ({ row }) => row.index + 1, // This gives the row number starting from 1
+  enableSorting: false,
+  enableHiding: false,
+  size: 50, // Optional: fixed width for the S.No column
+},
   {
     accessorKey: "banner",
     header: "Banner",
@@ -215,9 +202,17 @@ export const createAdvertisementColumns = (
     cell: ({ row }) => {
       const advertisement = row.original
       return (
-        <Badge variant={advertisement.ad_status ? "default" : "secondary"}>
-          {advertisement.ad_status ? "Inactive" : "Active"}
-        </Badge>
+        <div className="flex items-center space-x-2">
+          <Switch
+            checked={!advertisement.ad_status} // Note: ad_status true means inactive, so we invert
+            onCheckedChange={async (checked) => {
+              await onStatusToggle(advertisement.ad_id, advertisement.ad_status)
+            }}
+          />
+          <span className="text-sm text-gray-600">
+            {advertisement.ad_status ? "Inactive" : "Active"}
+          </span>
+        </div>
       )
     },
     size: 100,

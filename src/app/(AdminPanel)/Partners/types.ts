@@ -6,6 +6,8 @@ export interface Partner {
   updatedAt?: string;
   // Support for both naming conventions from API
   createdAt?: string;
+  status?: boolean; // true = active, false = inactive
+  partner_status?: boolean; // API field: true = inactive, false = active
 }
 
 export interface PartnerFormData {

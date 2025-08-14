@@ -469,7 +469,7 @@ const BookingsPage = () => {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
-                      <TableHead className="w-[100px]">Booking ID</TableHead>
+                      <TableHead className="w-[100px]">S.No</TableHead>
                       <TableHead className="min-w-[250px]">Event Details</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead>Seats</TableHead>
@@ -486,7 +486,7 @@ const BookingsPage = () => {
                     {bookings.map((booking) => (
                       <TableRow key={booking.booking_id} className="hover:bg-gray-50">
                         <TableCell className="font-medium">
-                          #{booking.booking_id}
+                          {bookings.indexOf(booking) + 1}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-3">

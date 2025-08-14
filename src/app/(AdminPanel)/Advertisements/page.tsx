@@ -96,6 +96,24 @@ export default function AdvertisementsPage() {
     setDeleteConfirm({ open: true, id })
   }
 
+  const handleStatusToggle = async (id: string, currentStatus: boolean) => {
+    try {
+      await advertisementService.toggleAdvertisementStatus(id)
+      // Update the local state
+      setAdvertisements(prev => 
+        prev.map(ad => 
+          ad.ad_id === id 
+            ? { ...ad, ad_status: !currentStatus }
+            : ad
+        )
+      )
+      toast.success(`Advertisement ${currentStatus ? 'activated' : 'deactivated'} successfully`)
+    } catch (error) {
+      console.error('Error toggling advertisement status:', error)
+      toast.error('Failed to update advertisement status')
+    }
+  }
+
   const confirmDelete = async () => {
     if (deleteConfirm.id) {
       try {
@@ -226,7 +244,7 @@ export default function AdvertisementsPage() {
     setIsFormOpen(true)
   }
 
-  const columns = createAdvertisementColumns(handleEdit, handleDelete)
+  const columns = createAdvertisementColumns(handleEdit, handleDelete, handleStatusToggle)
 
   return (
     <div className="space-y-6 p-6">
@@ -260,7 +278,7 @@ export default function AdvertisementsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {advertisements.filter(ad => ad.ad_status === true).length}
+              {advertisements.filter(ad => ad.ad_status === false).length}
             </div>
           </CardContent>
         </Card>
@@ -270,7 +288,7 @@ export default function AdvertisementsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {advertisements.filter(ad => ad.ad_status === false).length}
+              {advertisements.filter(ad => ad.ad_status === true).length}
             </div>
           </CardContent>
         </Card>
@@ -409,9 +427,11 @@ export default function AdvertisementsPage() {
               ) : (
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
                   <div className="text-center">
-                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
                     <div className="mt-4">
                       <label htmlFor="banner-upload" className="cursor-pointer">
+                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                    
+                      
                         <span className="mt-2 block text-sm font-medium text-gray-900">
                           Upload banner image
                         </span>

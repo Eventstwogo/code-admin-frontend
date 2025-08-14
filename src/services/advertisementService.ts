@@ -131,6 +131,16 @@ class AdvertisementService {
       throw error;
     }
   }
+
+  // Toggle advertisement status
+  async toggleAdvertisementStatus(id: string): Promise<void> {
+    try {
+      await axiosInstance.patch(`${this.baseUrl}/status/${id}`);
+    } catch (error) {
+      console.error('Error toggling advertisement status:', error);
+      throw error;
+    }
+  }
 }
 
 export const advertisementService = new AdvertisementService();
