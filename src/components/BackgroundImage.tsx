@@ -10,7 +10,7 @@ export default function BackgroundImage() {
         priority={typeof window !== 'undefined' && window.innerWidth > 768}
         className="object-cover z-0 opacity-70 dark:opacity-60"
         placeholder="blur"
-        blurDataURL="/logo.png"
+        blurDataURL="/logo1.png"
       />
       {/* Gradient overlay for vibrancy */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 dark:from-gray-900 dark:via-indigo-900 dark:to-purple-900 opacity-40 z-20" />

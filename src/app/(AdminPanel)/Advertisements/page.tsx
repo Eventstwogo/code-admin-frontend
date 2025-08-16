@@ -326,8 +326,8 @@ export default function AdvertisementsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="inactive">Active</SelectItem>
+                <SelectItem value="active">Inactive</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -381,24 +381,7 @@ export default function AdvertisementsPage() {
             </div>
 
             {/* Status */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Status</label>
-       <Select
-  value={formData.ad_status ? "true" : "false"} // true → Inactive, false → Active
-  onValueChange={(value) =>
-    setFormData(prev => ({ ...prev, ad_status: value === "true" }))
-  }
->
-  <SelectTrigger>
-    <SelectValue placeholder="Select status" />
-  </SelectTrigger>
-  <SelectContent>
-    <SelectItem value="false">Active</SelectItem>
-    <SelectItem value="true">Inactive</SelectItem>
-  </SelectContent>
-</Select>
-
-            </div>
+ 
 
             {/* Banner Upload */}
             <div className="space-y-2">
