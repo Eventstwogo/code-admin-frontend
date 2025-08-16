@@ -114,7 +114,7 @@ const CreateEventPage = () => {
       });
       
       if (isFeatured) {
-        toast.success("Event added to featured list successfully!");
+        toast.success("payment will be shortly updated");
       } else {
         toast.success("Event removed from featured list successfully!");
       }
@@ -354,7 +354,7 @@ const CreateEventPage = () => {
                   setSelectedEventForFeatured(null);
                 }
               }}>
-                Yes, Pay $50.00
+                Yes
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
